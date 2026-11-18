@@ -1,0 +1,31 @@
+WAKTU SHOLAT - paket Android (PWA)
+Developed by Ongarand
+
+PENTING: GPS dan service worker hanya jalan lewat HTTPS. Membuka index.html langsung dari
+penyimpanan HP (file://) tidak akan mengaktifkan GPS dan pemasangan. Unggah isi folder ini
+ke hosting HTTPS gratis, lalu buka alamatnya di Chrome Android.
+
+CARA 1 - Pasang sebagai aplikasi (paling mudah)
+1. Unggah semua berkas di folder ini ke hosting statis HTTPS
+   (GitHub Pages, Netlify Drop, Cloudflare Pages, atau hosting sendiri).
+2. Buka alamatnya di Chrome Android.
+3. Menu titik tiga > "Instal aplikasi" / "Tambahkan ke layar utama".
+4. Ikon bedug muncul di layar utama dan terbuka layar penuh.
+
+CARA 2 - Jadikan APK
+Setelah situs di atas aktif, buat APK dari alamat itu dengan PWABuilder (pwabuilder.com)
+atau Bubblewrap. Berkas manifest.webmanifest, sw.js, dan ikon di sini sudah memenuhi syarat.
+Saya belum membuat APK karena lingkungan kerja saya tidak punya Android SDK.
+
+BATASAN YANG PERLU DIKETAHUI
+- Pengingat berbunyi hanya saat aplikasi terbuka. Pengingat latar belakang yang andal
+  (saat layar mati) butuh aplikasi native; PWA tidak menjamin itu di Android.
+- Widget layar utama Android juga butuh aplikasi native. Tab "Widget" adalah tampilan
+  ringkas yang dimuat sekali per hari.
+- Data Kemenag (api.myquran.com) dan pencarian kelurahan (OpenStreetMap) butuh internet.
+  Tanpa itu, waktu dihitung dari titik GPS dengan parameter Kemenag.
+- Tanggal Kalender Hijriah Global Tunggal bertanda ≈ adalah hasil hitung yang belum
+  dicocokkan dengan tabel resmi Muhammadiyah.
+
+ISI
+index.html, manifest.webmanifest, sw.js, icon-192.png, icon-512.png, icon-maskable-512.png, icon.svg

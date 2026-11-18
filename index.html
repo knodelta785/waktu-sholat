@@ -1,0 +1,832 @@
+<!doctype html>
+<html lang="id"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#164a39">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>html,body{margin:0}</style>
+<title>Waktu Sholat</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap">
+<style>
+/* Tata letak: satu kolom 560px, kartu waktu dengan cincin hitung mundur, tab bawah. Palet: tinta hutan, kulit bedug, emas kuningan, krem kertas. */
+:root{
+  --bg:#f3efe6; --surface:#fbf9f3; --surface2:#ece6d7; --ink:#1d2a24; --muted:#67716a; --line:#d9d2c0;
+  --accent:#1f6b52; --accent-ink:#ffffff; --gold:#b27a1e; --hot:#b4472a; --ok:#1f6b52; --warn:#9a5b00; --warnbg:#f6e7c8; --ring:#e3dccb;
+  --font-d:'Fraunces',Georgia,'Times New Roman',serif; --font-b:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1714; --surface:#17211c; --surface2:#1f2c26; --ink:#ece8dc; --muted:#98a39b; --line:#2b3a33;
+  --accent:#58c29b; --accent-ink:#0b1712; --gold:#e0a846; --hot:#e07a5a; --ok:#58c29b; --warn:#e0b04c; --warnbg:#3a2f14; --ring:#27362f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1714; --surface:#17211c; --surface2:#1f2c26; --ink:#ece8dc; --muted:#98a39b; --line:#2b3a33;
+  --accent:#58c29b; --accent-ink:#0b1712; --gold:#e0a846; --hot:#e07a5a; --ok:#58c29b; --warn:#e0b04c; --warnbg:#3a2f14; --ring:#27362f; color-scheme:dark}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--font-b);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 96px;min-height:100%}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.app{max-width:560px;margin:0 auto}
+header.top{display:flex;align-items:center;gap:12px;padding:14px 0 10px}
+header.top .t{display:flex;flex-direction:column;line-height:1.15}
+header.top b{font:600 22px var(--font-d);letter-spacing:.01em}
+header.top small{color:var(--muted);font-size:12px;letter-spacing:.04em}
+.logo{width:44px;height:44px;flex:none}
+#view{display:flex;flex-direction:column;gap:14px;padding-top:4px}
+.ic{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.locchip{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.locchip .ic{color:var(--accent)}
+.lc-t{display:flex;flex-direction:column;min-width:0}
+.lc-t b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lc-t small{color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.datel{margin:0;text-align:center;font:500 17px var(--font-d)}
+.hij{color:var(--gold);font:600 14px var(--font-b);letter-spacing:.02em}
+.hero{display:flex;justify-content:center}
+.ring{position:relative;width:min(300px,78vw);aspect-ratio:1}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.rim{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+.stud{fill:var(--gold);opacity:.55}
+.track{fill:none;stroke:var(--ring);stroke-width:10}
+.arc{fill:none;stroke:var(--accent);stroke-width:10;stroke-linecap:round;transition:stroke-dashoffset .9s linear}
+.ring-c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.next-l{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.next-n{font:600 28px var(--font-d)}
+.next-t{font:600 46px/1 var(--font-d);font-variant-numeric:tabular-nums;color:var(--accent)}
+.next-cd{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;min-height:1.4em}
+.list{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.row{display:flex;align-items:center;gap:10px;padding:13px 16px;border-top:1px solid var(--line);width:100%;background:none;border-left:0;border-right:0;border-bottom:0;text-align:left}
+.row:first-child{border-top:0}
+.row .nm{flex:1;min-width:0;font-weight:500}
+.row .nm small{display:block;color:var(--muted);font-weight:400;font-size:12px}
+.row .tm{font:600 20px var(--font-d);font-variant-numeric:tabular-nums}
+.row .tm.sm{font:500 14px var(--font-b);color:var(--muted)}
+.row.minor{padding-block:9px}
+.row.minor .nm{color:var(--muted);font-weight:400}
+.row.minor .tm{font-size:16px;color:var(--muted)}
+.row.past{opacity:.55}
+.row.next{background:color-mix(in srgb,var(--accent) 12%,var(--surface));box-shadow:inset 4px 0 0 var(--accent)}
+.bell,.bell-sp{width:36px;height:36px;flex:none}
+.bell{border:0;background:none;border-radius:50%;display:grid;place-items:center;color:var(--muted)}
+.bell.on{color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.card.nopad{padding:0;gap:0}
+.card.src{font-size:13px}
+.card.src b{font-weight:600}
+.card.src span{color:var(--muted)}
+.card.src.ok b{color:var(--ok)}
+.card.src.warn{background:var(--warnbg);border-color:transparent}
+.card.src.warn b{color:var(--warn)}
+.card.note{border-color:var(--gold)}
+.card.note p{margin:0}
+.warn-t{color:var(--warn);margin:0;font-size:13px}
+.hint,.muted{color:var(--muted);font-size:13px;margin:0}
+.muted.pad{padding:12px 16px}
+.foot{text-align:center;color:var(--muted);font-size:12px;margin:6px 0 0;letter-spacing:.04em}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--accent);color:var(--accent-ink);border:0;border-radius:12px;padding:11px 16px;font-weight:600;min-height:44px}
+.btn:disabled{opacity:.6;cursor:default}
+.btn.sm{min-height:40px;padding:8px 14px;flex:none}
+.btn.ghost{background:transparent;color:var(--accent);border:1.5px solid var(--accent)}
+.sec h2{font:600 13px var(--font-b);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:6px 2px 8px}
+.curloc{display:flex;gap:10px;align-items:flex-start}
+.curloc .ic{color:var(--accent);margin-top:2px}
+.curloc span{display:flex;flex-direction:column;min-width:0}
+.curloc small{color:var(--muted);font-size:12.5px}
+.lbl{font-size:13px;color:var(--muted);margin-top:4px}
+.sr{display:flex;gap:8px}
+input[type=search],select{width:100%;min-height:44px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:8px 12px}
+input[type=search]{min-width:0}
+.reslist{max-height:260px;overflow:auto}
+.seg{display:flex;background:var(--surface2);border-radius:12px;padding:3px;gap:3px}
+.seg button{flex:1;border:0;background:none;border-radius:9px;padding:9px 6px;font-size:13.5px;font-weight:500;min-height:40px;color:var(--muted)}
+.seg button[aria-pressed=true]{background:var(--surface);color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgb(0 0 0/.12)}
+.seg.three button{font-size:12.5px;padding-inline:4px}
+.field{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 14px;border-top:1px solid var(--line)}
+.field:first-child{border-top:0}
+.field>span:first-child{display:flex;flex-direction:column;min-width:0}
+.field small{color:var(--muted);font-size:12.5px;font-weight:400}
+.field select{width:auto;min-width:150px}
+.sw{position:relative;width:48px;height:28px;flex:none}
+.sw input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;width:100%;height:100%}
+.sw i{position:absolute;inset:0;background:var(--line);border-radius:99px;transition:.2s;pointer-events:none}
+.sw i::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:.2s}
+.sw input:checked+i{background:var(--accent)}
+.sw input:checked+i::after{transform:translateX(20px)}
+.sw input:focus-visible+i{outline:2px solid var(--accent);outline-offset:2px}
+.about{flex-direction:row;align-items:center;gap:12px}
+.about div{display:flex;flex-direction:column;gap:2px}
+.about span{color:var(--gold);font-weight:600}
+.about small{color:var(--muted);font-size:12.5px}
+.ab-logo{width:56px;height:56px;flex:none}
+.hnow .k{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.hnow b{font:600 24px var(--font-d);color:var(--gold)}
+.calnav{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.cm{display:flex;flex-direction:column;align-items:center;text-align:center}
+.cm b{font:600 21px var(--font-d)}
+.cm small{color:var(--muted);font-size:12.5px}
+.icb{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center}
+.icb:disabled{opacity:.35;cursor:default}
+.est{font-style:normal;color:var(--warn);font-weight:600}
+.calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.dow{text-align:center;font-size:12px;color:var(--muted);padding:4px 0}
+.cell{aspect-ratio:1/1.05;background:var(--surface);border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.15;min-width:0}
+.cell.empty{background:none;border:0}
+.cell b{font:600 16px var(--font-d)}
+.cell small{font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
+.cell.fri b{color:var(--accent)}
+.cell.abd{background:var(--surface2)}
+.cell.ev{border-color:var(--gold);box-shadow:inset 0 -3px 0 var(--gold)}
+.cell.today{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.cell.today small,.cell.today b{color:var(--accent-ink)}
+.evl .ei{display:flex;gap:12px;font-size:13.5px;padding-top:6px;border-top:1px solid var(--line)}
+.evl .ei span:first-child{flex:none;width:90px;color:var(--gold);font-weight:600}
+.evl .ei span:last-child{min-width:0}
+.card.fine span{color:var(--muted);font-size:12.5px}
+.trow .len{color:var(--muted);font-size:12.5px;width:56px;text-align:right}
+.tbl .row{cursor:pointer}
+.widget{background:linear-gradient(160deg,#1f6b52,#124434);color:#f4efe0;border-radius:24px;padding:16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 8px 24px rgb(0 0 0/.18)}
+.w-head{display:flex;align-items:center;gap:10px}
+.w-head b{font:600 17px var(--font-d)}
+.w-head small{display:block;opacity:.8;font-size:12px}
+.w-logo{width:36px;height:36px;flex:none}
+.w-date{margin:0;font-size:13px;opacity:.9}
+.w-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(86px,1fr));gap:8px}
+.wc{background:rgb(255 255 255/.10);border-radius:14px;padding:10px 8px;text-align:center;display:flex;flex-direction:column;gap:2px}
+.wc span{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;opacity:.85}
+.wc b{font:600 22px var(--font-d);font-variant-numeric:tabular-nums}
+.wc.minor b{font-size:18px;opacity:.9}
+.wc.past{opacity:.55}
+.wc.next{background:#f4efe0;color:#124434;opacity:1}
+.w-foot{margin:0;font-size:11.5px;opacity:.75}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:11px 16px;border-radius:12px;font-size:14px;max-width:min(92vw,520px);z-index:30;box-shadow:0 6px 20px rgb(0 0 0/.25)}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);z-index:20;padding:0 max(8px,env(safe-area-inset-right,0px)) env(safe-area-inset-bottom,0px) max(8px,env(safe-area-inset-left,0px))}
+#tabs-in{display:flex;max-width:560px;margin:0 auto}
+.tab{flex:1;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 4px 8px;font-size:11.5px;color:var(--muted);min-height:56px}
+.tab[aria-current=page]{color:var(--accent);font-weight:600}
+@media (prefers-reduced-motion:reduce){.arc,.sw i,.sw i::after{transition:none}}
+@media (max-width:380px){.next-t{font-size:40px}.row .tm{font-size:18px}}
+</style>
+<div class="app">
+  <header class="top">
+    <svg class="logo" viewBox="0 0 120 120" aria-hidden="true"><use href="#bedug"/></svg>
+    <div class="t"><b>Waktu Sholat</b><small>Developed by Ongarand</small></div>
+  </header>
+  <main id="view" aria-live="off"></main>
+</div>
+<nav class="tabs" aria-label="Menu utama"><div id="tabs-in"></div></nav>
+<div id="toast" role="status" hidden></div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="bedug" viewBox="0 0 120 120">
+    <rect width="120" height="120" rx="27" fill="#164a39"/>
+    <path d="M20 40 Q60 28 100 40 L100 82 Q60 94 20 82 Z" fill="#a9622c"/>
+    <path d="M20 40 Q60 28 100 40 L100 50 Q60 38 20 50 Z" fill="#c07a3c"/>
+    <path d="M20 72 Q60 84 100 72 L100 82 Q60 94 20 82 Z" fill="#7d4219"/>
+    <ellipse cx="22" cy="61" rx="9" ry="22" fill="#f1e3c0" stroke="#5f3411" stroke-width="3"/>
+    <ellipse cx="22" cy="61" rx="4" ry="13" fill="none" stroke="#c9a46a" stroke-width="1.6"/>
+    <g fill="#f0c25a"><circle cx="38" cy="43" r="2.3"/><circle cx="56" cy="40.5" r="2.3"/><circle cx="74" cy="41.5" r="2.3"/><circle cx="90" cy="45" r="2.3"/><circle cx="38" cy="79" r="2.3"/><circle cx="56" cy="82" r="2.3"/><circle cx="74" cy="81" r="2.3"/><circle cx="90" cy="77" r="2.3"/></g>
+    <path d="M100 40 Q108 61 100 82" fill="none" stroke="#5f3411" stroke-width="3"/>
+    <path d="M30 100 L48 90 M90 100 L72 90" stroke="#f1e3c0" stroke-width="5" stroke-linecap="round"/>
+    <path d="M34 22 L46 30 M86 22 L74 30" stroke="#f0c25a" stroke-width="5" stroke-linecap="round"/>
+  </symbol>
+</defs></svg>
+<script>
+const LOGO = cls => '<svg class="' + cls + '" viewBox="0 0 120 120" aria-hidden="true"><use href="#bedug"/></svg>';
+// ===== Bagian murni: hitungan waktu sholat, tanggal, kalender KHGT, helper lokasi =====
+const MONTHS_ID = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+const MON_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+const DAYS_ID = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+const HMONTHS = ['Muharram', 'Safar', 'Rabiul Awal', 'Rabiul Akhir', 'Jumadil Awal', 'Jumadil Akhir', 'Rajab', 'Syaban', 'Ramadan', 'Syawal', 'Dzulkaidah', 'Dzulhijjah'];
+const pad = n => String(n).padStart(2, '0');
+const dayNum = iso => { const [y, m, d] = iso.split('-').map(Number); return Math.floor(Date.UTC(y, m - 1, d) / 86400000); };
+const isoFromNum = n => new Date(n * 86400000).toISOString().slice(0, 10);
+const addDays = (iso, n) => isoFromNum(dayNum(iso) + n);
+const dowOf = iso => new Date(dayNum(iso) * 86400000).getUTCDay();
+const cityToday = tz => new Date(Date.now() + tz * 3600000).toISOString().slice(0, 10);
+const epochOf = (iso, hm, tz) => {
+  const [y, m, d] = iso.split('-').map(Number); const [h, mi] = hm.split(':').map(Number);
+  return Date.UTC(y, m - 1, d, h, mi) - tz * 3600000;
+};
+const fmtLong = iso => { const [y, m, d] = iso.split('-').map(Number); return DAYS_ID[dowOf(iso)] + ', ' + d + ' ' + MONTHS_ID[m - 1] + ' ' + y; };
+const fmtShort = iso => { const [y, m, d] = iso.split('-').map(Number); return d + ' ' + MON_SHORT[m - 1]; };
+const fmtMid = iso => { const [y, m, d] = iso.split('-').map(Number); return d + ' ' + MON_SHORT[m - 1] + ' ' + y; };
+const tzLabel = tz => tz === 7 ? 'WIB' : tz === 8 ? 'WITA' : tz === 9 ? 'WIT' : 'UTC' + (tz >= 0 ? '+' : '') + tz;
+
+// ---- Astronomi dasar (mengikuti pendekatan PrayTimes) ----
+const D2R = Math.PI / 180;
+const dsin = d => Math.sin(d * D2R), dcos = d => Math.cos(d * D2R), dtan = d => Math.tan(d * D2R);
+const darcsin = x => Math.asin(x) / D2R, darccos = x => Math.acos(x) / D2R, darctan2 = (y, x) => Math.atan2(y, x) / D2R, darccot = x => Math.atan(1 / x) / D2R;
+const fixAngle = a => a - 360 * Math.floor(a / 360);
+const fixHour = h => h - 24 * Math.floor(h / 24);
+function julian(y, m, d) {
+  if (m <= 2) { y -= 1; m += 12; }
+  const A = Math.floor(y / 100), B = 2 - A + Math.floor(A / 4);
+  return Math.floor(365.25 * (y + 4716)) + Math.floor(30.6001 * (m + 1)) + d + B - 1524.5;
+}
+function sunPosition(jd) {
+  const D = jd - 2451545.0;
+  const g = fixAngle(357.529 + 0.98560028 * D), q = fixAngle(280.459 + 0.98564736 * D);
+  const L = fixAngle(q + 1.915 * dsin(g) + 0.020 * dsin(2 * g));
+  const e = 23.439 - 0.00000036 * D;
+  const RA = fixHour(darctan2(dcos(e) * dsin(L), dcos(L)) / 15);
+  return { decl: darcsin(dsin(e) * dsin(L)), eqt: q / 15 - RA };
+}
+function computeTimes(y, m, d, lat, lng, tz, cfg) {
+  const jd = julian(y, m, d) - lng / (15 * 24);
+  const dec = t => sunPosition(jd + t).decl, eqt = t => sunPosition(jd + t).eqt;
+  const mid = t => fixHour(12 - eqt(t));
+  const angleT = (angle, t, ccw) => {
+    const dc = dec(t);
+    const x = (-dsin(angle) - dsin(dc) * dsin(lat)) / (dcos(dc) * dcos(lat));
+    if (x > 1 || x < -1) return NaN;
+    const v = darccos(x) / 15;
+    return mid(t) + (ccw ? -v : v);
+  };
+  const asrT = (f, t) => { const dc = dec(t); return angleT(-darccot(f + dtan(Math.abs(lat - dc))), t, false); };
+  let t = { fajr: 5 / 24, sunrise: 6 / 24, dhuhr: 12 / 24, asr: 13 / 24, sunset: 18 / 24, isha: 18 / 24, dhuha: 7 / 24 };
+  let r = {};
+  for (let i = 0; i < 3; i++) {
+    r = {
+      fajr: angleT(cfg.fajr, t.fajr, true), sunrise: angleT(0.833, t.sunrise, true), dhuhr: mid(t.dhuhr),
+      asr: asrT(cfg.asr || 1, t.asr), maghrib: angleT(0.833, t.sunset, false), isha: NaN, dhuha: angleT(-4.5, t.dhuha, true)
+    };
+    r.isha = cfg.ishaMin ? r.maghrib + cfg.ishaMin / 60 : angleT(cfg.isha, t.isha, false);
+    t = { fajr: r.fajr / 24, sunrise: r.sunrise / 24, dhuhr: r.dhuhr / 24, asr: r.asr / 24, sunset: r.maghrib / 24, isha: r.isha / 24, dhuha: r.dhuha / 24 };
+    if (Object.values(r).some(v => !isFinite(v))) break;
+  }
+  const adj = tz - lng / 15;
+  for (const k in r) r[k] = r[k] + adj;
+  return r;
+}
+const CFG = {
+  kemenag: { fajr: 20, isha: 18, ihtiyat: true },
+  MWL: { fajr: 18, isha: 17 }, SINGAPORE: { fajr: 20, isha: 18 }, EGYPT: { fajr: 19.5, isha: 17.5 },
+  MAKKAH: { fajr: 18.5, ishaMin: 90 }, KARACHI: { fajr: 18, isha: 18 }, ISNA: { fajr: 15, isha: 15 }
+};
+const MP_METHODS = [['MWL', 'Liga Muslim Dunia (MWL)'], ['SINGAPORE', 'Singapura (MUIS)'], ['EGYPT', 'Otoritas Umum Mesir'], ['MAKKAH', 'Umm al-Qura (Makkah)'], ['KARACHI', 'Univ. Karachi'], ['ISNA', 'ISNA (Amerika Utara)']];
+function formatDay(raw, cfg) {
+  const mins = k => raw[k] * 60;
+  let o;
+  if (cfg.ihtiyat) {
+    const c = k => Math.ceil(mins(k) - 1e-9) + 2;
+    const subuh = c('fajr');
+    o = { imsak: subuh - 10, subuh, terbit: Math.floor(mins('sunrise')) - 2, dhuha: Math.ceil(mins('dhuha')), dzuhur: c('dhuhr'), ashar: c('asr'), maghrib: c('maghrib'), isya: c('isha') };
+  } else {
+    const r = k => Math.round(mins(k));
+    const subuh = r('fajr');
+    o = { imsak: subuh - 10, subuh, terbit: r('sunrise'), dhuha: r('dhuha'), dzuhur: r('dhuhr'), ashar: r('asr'), maghrib: r('maghrib'), isya: r('isha') };
+  }
+  const hm = v => { if (!isFinite(v)) return '--:--'; v = ((v % 1440) + 1440) % 1440; return pad(Math.floor(v / 60)) + ':' + pad(v % 60); };
+  for (const k in o) o[k] = hm(o[k]);
+  return o;
+}
+// methodKey: 'kemenag' atau kunci metode Muslim Pro; asrMode: 'shafi' | 'hanafi'
+function calcDay(lat, lng, tz, iso, methodKey, asrMode) {
+  const [y, m, d] = iso.split('-').map(Number);
+  const cfg = Object.assign({}, CFG[methodKey] || CFG.MWL);
+  cfg.asr = methodKey === 'kemenag' ? 1 : (asrMode === 'hanafi' ? 2 : 1);
+  return formatDay(computeTimes(y, m, d, lat, lng, tz, cfg), cfg);
+}
+
+// ---- Kalender Hijriah Global Tunggal (KHGT, Muhammadiyah) ----
+// [awal bulan (Masehi), tahun H, bulan, 1 = hasil hitung KHGT yang belum terkonfirmasi tabel resmi]
+const KH = [
+  ['2025-06-26', 1447, 1, 1], ['2025-07-26', 1447, 2, 1], ['2025-08-24', 1447, 3, 1], ['2025-09-23', 1447, 4, 1],
+  ['2025-10-22', 1447, 5, 1], ['2025-11-21', 1447, 6, 1], ['2025-12-21', 1447, 7, 1], ['2026-01-20', 1447, 8, 1],
+  ['2026-02-18', 1447, 9, 0], ['2026-03-20', 1447, 10, 0], ['2026-04-18', 1447, 11, 1], ['2026-05-18', 1447, 12, 0],
+  ['2026-06-16', 1448, 1, 0], ['2026-07-15', 1448, 2, 1], ['2026-08-14', 1448, 3, 0], ['2026-09-12', 1448, 4, 0],
+  ['2026-10-11', 1448, 5, 1], ['2026-11-10', 1448, 6, 1], ['2026-12-10', 1448, 7, 0], ['2027-01-09', 1448, 8, 0],
+  ['2027-02-08', 1448, 9, 0], ['2027-03-09', 1448, 10, 0], ['2027-04-08', 1448, 11, 1], ['2027-05-07', 1448, 12, 0],
+  ['2027-06-06', 1449, 1, 1], ['2027-07-05', 1449, 2, 1]
+];
+function hijriOf(iso) {
+  const n = dayNum(iso);
+  for (let i = 0; i < KH.length - 1; i++) {
+    if (dayNum(KH[i][0]) <= n && n < dayNum(KH[i + 1][0])) return { y: KH[i][1], m: KH[i][2], d: n - dayNum(KH[i][0]) + 1, est: KH[i][3] === 1, idx: i };
+  }
+  return null;
+}
+const hijriText = h => h ? h.d + ' ' + HMONTHS[h.m - 1] + ' ' + h.y + ' H' : '';
+const HEVENTS = {
+  '1-1': 'Tahun Baru Hijriah', '1-10': 'Hari Asyura', '3-12': 'Maulid Nabi', '7-27': "Isra Mi'raj", '8-15': 'Nisfu Syaban',
+  '9-1': 'Awal Ramadan', '9-17': 'Nuzulul Quran', '10-1': 'Idulfitri', '12-9': 'Hari Arafah', '12-10': 'Iduladha'
+};
+
+// ---- Lokasi ----
+const CITIES = [
+  ['jakarta', 'Jakarta', -6.2088, 106.8456, 7], ['bandung', 'Bandung', -6.9175, 107.6191, 7], ['bogor', 'Bogor', -6.5971, 106.8060, 7],
+  ['bekasi', 'Bekasi', -6.2383, 106.9756, 7], ['depok', 'Depok', -6.4025, 106.7942, 7], ['tangerang', 'Tangerang', -6.1783, 106.6319, 7],
+  ['serang', 'Serang', -6.1104, 106.1640, 7], ['cirebon', 'Cirebon', -6.7320, 108.5523, 7], ['semarang', 'Semarang', -6.9667, 110.4167, 7],
+  ['surakarta', 'Surakarta', -7.5755, 110.8243, 7], ['yogyakarta', 'Yogyakarta', -7.7956, 110.3695, 7], ['surabaya', 'Surabaya', -7.2575, 112.7521, 7],
+  ['malang', 'Malang', -7.9666, 112.6326, 7], ['medan', 'Medan', 3.5952, 98.6722, 7], ['banda-aceh', 'Banda Aceh', 5.5483, 95.3238, 7],
+  ['pekanbaru', 'Pekanbaru', 0.5071, 101.4478, 7], ['padang', 'Padang', -0.9471, 100.4172, 7], ['jambi', 'Jambi', -1.6101, 103.6131, 7],
+  ['palembang', 'Palembang', -2.9761, 104.7754, 7], ['bengkulu', 'Bengkulu', -3.8004, 102.2655, 7], ['bandar-lampung', 'Bandar Lampung', -5.4292, 105.2610, 7],
+  ['pangkalpinang', 'Pangkalpinang', -2.1291, 106.1090, 7], ['batam', 'Batam', 1.0456, 104.0305, 7], ['tanjungpinang', 'Tanjungpinang', 0.9186, 104.4658, 7],
+  ['pontianak', 'Pontianak', -0.0263, 109.3425, 7], ['palangka-raya', 'Palangka Raya', -2.2161, 113.9135, 7], ['banjarmasin', 'Banjarmasin', -3.3186, 114.5944, 8],
+  ['balikpapan', 'Balikpapan', -1.2379, 116.8529, 8], ['samarinda', 'Samarinda', -0.5022, 117.1536, 8], ['denpasar', 'Denpasar', -8.6705, 115.2126, 8],
+  ['mataram', 'Mataram', -8.5833, 116.1167, 8], ['kupang', 'Kupang', -10.1772, 123.6070, 8], ['makassar', 'Makassar', -5.1477, 119.4327, 8],
+  ['palu', 'Palu', -0.8917, 119.8707, 8], ['kendari', 'Kendari', -3.9985, 122.5130, 8], ['gorontalo', 'Gorontalo', 0.5435, 123.0568, 8],
+  ['manado', 'Manado', 1.4748, 124.8421, 8], ['ambon', 'Ambon', -3.6954, 128.1814, 9], ['ternate', 'Ternate', 0.7833, 127.3667, 9],
+  ['sorong', 'Sorong', -0.8762, 131.2558, 9], ['jayapura', 'Jayapura', -2.5337, 140.7181, 9]
+];
+function haversine(a, b, c, d) {
+  const R = 6371, dLat = (c - a) * D2R, dLng = (d - b) * D2R;
+  const x = Math.sin(dLat / 2) ** 2 + Math.cos(a * D2R) * Math.cos(c * D2R) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(x));
+}
+// Zona waktu Indonesia dari bujur; null bila di luar Indonesia
+function tzIndonesia(lat, lng) {
+  if (lat < -11.5 || lat > 6.5 || lng < 94 || lng > 142) return null;
+  return lng >= 127 ? 9 : lng >= 114.4 ? 8 : 7;
+}
+// Susun wilayah (kelurahan/desa, kecamatan, kota/kabupaten, provinsi) dari alamat Nominatim
+function parseArea(a) {
+  if (!a) return null;
+  const kel = a.village || a.suburb || a.neighbourhood || a.quarter || a.hamlet || '';
+  const kec = a.city_district || a.district || a.subdistrict || a.municipality || '';
+  const kota = a.city || a.county || a.town || a.regency || '';
+  const kotaType = a.city ? 'kota' : (a.county || a.regency) ? 'kab' : '';
+  const prov = a.state || '';
+  if (!kel && !kec && !kota && !prov) return null;
+  return { kel, kec, kota, kotaType, prov };
+}
+function kemenagKeyword(area) {
+  if (!area || !area.kota) return null;
+  const m = /^(kota|kabupaten|kab\.?)\s+/i.exec(area.kota.trim());
+  const name = area.kota.trim().replace(/^(kota|kabupaten|kab\.?|city of)\s+/i, '').trim();
+  if (!name) return null;
+  let type = area.kotaType || '';
+  if (m) type = /^kota/i.test(m[1]) ? 'kota' : 'kab';
+  return { name, type };
+}
+function pickCity(list, kw) {
+  if (!Array.isArray(list) || !list.length) return null;
+  const txt = it => String(it.lokasi || it.nama || it.name || it.kabkota || '').toUpperCase();
+  const N = kw.name.toUpperCase();
+  const wantKota = kw.type !== 'kab';
+  const exact = list.filter(it => { const t = txt(it).replace(/^(KOTA|KAB\.?|KABUPATEN)\s+/, ''); return t === N; });
+  const pool = exact.length ? exact : list;
+  const byType = pool.find(it => wantKota ? /^KOTA\b/.test(txt(it)) : /^KAB/.test(txt(it)));
+  const pick = byType || pool[0];
+  return pick && pick.id != null ? pick : null;
+}
+const normHM = v => { const m = /(\d{1,2})[:.](\d{2})/.exec(String(v == null ? '' : v)); return m ? pad(+m[1]) + ':' + m[2] : null; };
+function findSchedule(o, depth) {
+  depth = depth || 0;
+  if (!o || typeof o !== 'object' || depth > 5) return null;
+  if (typeof o.subuh === 'string' && typeof o.maghrib === 'string') return o;
+  for (const k in o) { const r = findSchedule(o[k], depth + 1); if (r) return r; }
+  return null;
+}
+function findList(o, depth) {
+  depth = depth || 0;
+  if (Array.isArray(o)) return o;
+  if (!o || typeof o !== 'object' || depth > 3) return null;
+  for (const k in o) { const r = findList(o[k], depth + 1); if (r) return r; }
+  return null;
+}
+
+
+// ===== Aplikasi Waktu Sholat: lokasi, sumber data, tampilan, pengingat =====
+const $ = (s, r) => (r || document).querySelector(s);
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } },
+  del(k) { try { localStorage.removeItem(k); } catch (e) { } }
+};
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+const DEF = {
+  source: 'kemenag', mp: 'MWL', asr: 'shafi', imsak: false, dhuha: false, remind: false, lead: 0, sound: true, theme: 'auto',
+  loc: null, calView: 'bulan', rem: { imsak: false, subuh: true, dzuhur: true, ashar: true, maghrib: true, isya: true, dhuha: false }
+};
+let S = Object.assign({}, DEF, store.get('ws.settings', {}));
+S.rem = Object.assign({}, DEF.rem, S.rem || {});
+const save = () => store.set('ws.settings', S);
+const deviceTz = () => -new Date().getTimezoneOffset() / 60;
+
+let DAY = null, DAY_DATE = null, NEXT = null, EVS = [], BUSY = '', RESULTS = null, SEARCHING = false, CAL_IDX = null, TIMERS = [], GPS_NOTE = '';
+
+function curLoc() {
+  if (S.loc) return S.loc;
+  const c = CITIES[0];
+  return { mode: 'default', lat: c[2], lng: c[3], tz: c[4], name: c[1], area: { kota: c[1], kotaType: 'kota' } };
+}
+const locTitle = l => { const a = l.area || {}; return a.kel ? (/^(kel|desa)/i.test(a.kel) ? a.kel : 'Kel. ' + a.kel) : (l.name || a.kota || (l.mode === 'gps' ? 'Titik GPS Anda' : 'Lokasi')); };
+const locSub = l => {
+  const a = l.area || {}, p = [];
+  if (a.kec) p.push('Kec. ' + a.kec.replace(/^(kec\.?|kecamatan)\s+/i, ''));
+  if (a.kota) p.push(a.kota);
+  if (a.prov && (a.kel || a.kec)) p.push(a.prov);
+  return p.join(', ');
+};
+const coordText = l => Math.abs(l.lat).toFixed(4) + '°' + (l.lat < 0 ? 'LS' : 'LU') + ' ' + Math.abs(l.lng).toFixed(4) + '°' + (l.lng < 0 ? 'BB' : 'BT');
+
+// ---------- Tema, toast, suara, notifikasi ----------
+function applyTheme() {
+  const r = document.documentElement;
+  if (S.theme === 'light' || S.theme === 'dark') r.setAttribute('data-theme', S.theme); else r.removeAttribute('data-theme');
+}
+let toastT = 0;
+function toast(msg) {
+  const t = $('#toast'); if (!t) return;
+  t.textContent = msg; t.hidden = false; clearTimeout(toastT);
+  toastT = setTimeout(() => { t.hidden = true; }, 3800);
+}
+function beep() {
+  try {
+    const A = window.AudioContext || window.webkitAudioContext; if (!A) return;
+    const ctx = new A(), now = ctx.currentTime;
+    [[523.25, 0], [659.25, 0.28], [783.99, 0.56]].forEach(([f, d]) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.value = f; o.connect(g); g.connect(ctx.destination);
+      g.gain.setValueAtTime(0.0001, now + d); g.gain.exponentialRampToValueAtTime(0.25, now + d + 0.04); g.gain.exponentialRampToValueAtTime(0.0001, now + d + 0.9);
+      o.start(now + d); o.stop(now + d + 1);
+    });
+    setTimeout(() => { try { ctx.close(); } catch (e) { } }, 2200);
+  } catch (e) { }
+}
+function systemNotify(title, body) {
+  try {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+      navigator.serviceWorker.ready.then(r => r.showNotification(title, { body, icon: 'icon-192.png', badge: 'icon-192.png', tag: 'waktu-sholat' })).catch(() => { try { new Notification(title, { body }); } catch (e) { } });
+    } else new Notification(title, { body });
+  } catch (e) { }
+}
+function scheduleReminders() {
+  TIMERS.forEach(clearTimeout); TIMERS = [];
+  if (!S.remind || !DAY) return;
+  const now = Date.now();
+  EVS.forEach(e => {
+    if (e.k === 'terbit' || !S.rem[e.k] || !isFinite(e.t)) return;
+    const at = e.t - (S.lead || 0) * 60000, delay = at - now;
+    if (delay <= 0 || delay > 36 * 3600000) return;
+    TIMERS.push(setTimeout(() => {
+      const msg = S.lead ? e.label + ' ' + S.lead + ' menit lagi (' + e.hm + ')' : 'Waktu ' + e.label + ' (' + e.hm + ')';
+      toast(msg); if (S.sound) beep(); systemNotify('Waktu Sholat', msg);
+    }, delay));
+  });
+}
+
+// ---------- Lokasi ----------
+function getPos() {
+  return new Promise((res, rej) => {
+    if (!navigator.geolocation) return rej({ code: 0 });
+    navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 15000, maximumAge: 120000 });
+  });
+}
+function gpsErrorText(e) {
+  if (e && e.code === 1) return 'Izin lokasi ditolak atau tidak tersedia di tampilan ini. Aktifkan izin lokasi, atau pilih lokasi secara manual.';
+  if (e && e.code === 0) return 'GPS tidak tersedia di perangkat ini. Pilih lokasi secara manual.';
+  return 'Lokasi belum terdeteksi. Coba lagi di tempat terbuka atau pilih lokasi secara manual.';
+}
+function ctl(ms) { const c = new AbortController(); setTimeout(() => c.abort(), ms); return c.signal; }
+async function getJSON(url, ms) { const r = await fetch(url, { signal: ctl(ms || 7000) }); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }
+async function reverseGeocode(lat, lng) {
+  try {
+    const j = await getJSON('https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&zoom=18&accept-language=id&lat=' + lat + '&lon=' + lng, 8000);
+    return parseArea(j && j.address);
+  } catch (e) { return null; }
+}
+async function doGPS() {
+  BUSY = 'Mencari lokasi GPS…'; GPS_NOTE = ''; render();
+  try {
+    const p = await getPos();
+    const lat = p.coords.latitude, lng = p.coords.longitude, acc = Math.round(p.coords.accuracy || 0);
+    const old = S.loc;
+    if (old && old.mode === 'gps' && haversine(old.lat, old.lng, lat, lng) < 0.5) { old.acc = acc; }
+    else S.loc = { mode: 'gps', lat, lng, acc, tz: deviceTz(), area: null };
+    save(); BUSY = ''; render(); loadDay(false);
+    const loc = S.loc;
+    if (!loc.area) {
+      const area = await reverseGeocode(loc.lat, loc.lng);
+      if (area && S.loc === loc) { loc.area = area; save(); toast('Lokasi: ' + locTitle(loc)); loadDay(true); }
+      else if (!area) { GPS_NOTE = 'Nama kelurahan belum bisa diambil (butuh internet). Waktu tetap dihitung dari titik GPS Anda.'; render(); }
+    }
+  } catch (e) { BUSY = ''; GPS_NOTE = gpsErrorText(e); render(); toast(GPS_NOTE); }
+}
+async function doSearch(q) {
+  q = (q || '').trim(); if (q.length < 3) { toast('Tulis minimal 3 huruf, misalnya nama kelurahan dan kota.'); return; }
+  SEARCHING = true; RESULTS = null; render();
+  try {
+    const j = await getJSON('https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&countrycodes=id&accept-language=id&limit=8&q=' + encodeURIComponent(q), 9000);
+    RESULTS = (j || []).map(r => ({ lat: +r.lat, lng: +r.lon, label: r.display_name, area: parseArea(r.address) })).filter(r => isFinite(r.lat));
+    if (!RESULTS.length) toast('Tidak ada hasil. Coba tulis nama kelurahan dan kotanya.');
+  } catch (e) { RESULTS = []; toast('Pencarian butuh internet dan tidak tersedia saat ini.'); }
+  SEARCHING = false; render();
+}
+function pickResult(i) {
+  const r = RESULTS && RESULTS[i]; if (!r) return;
+  const tz = tzIndonesia(r.lat, r.lng);
+  S.loc = { mode: 'manual', lat: r.lat, lng: r.lng, tz: tz == null ? deviceTz() : tz, area: r.area, name: (r.area && (r.area.kel || r.area.kota)) || r.label.split(',')[0] };
+  RESULTS = null; save(); render(); loadDay(false); toast('Lokasi diganti: ' + locTitle(S.loc));
+}
+function pickCityId(id) {
+  const c = CITIES.find(x => x[0] === id); if (!c) return;
+  S.loc = { mode: 'city', lat: c[2], lng: c[3], tz: c[4], name: c[1], area: { kota: c[1], kotaType: 'kota' } };
+  save(); render(); loadDay(false); toast('Lokasi diganti: ' + c[1]);
+}
+
+// ---------- Data waktu sholat ----------
+const SRC_NAME = () => S.source === 'muslimpro' ? 'Muslim Pro' : 'Kemenag RI';
+function methodKey() { return S.source === 'muslimpro' ? S.mp : 'kemenag'; }
+function calcFor(loc, iso) { return calcDay(loc.lat, loc.lng, loc.tz, iso, methodKey(), S.asr); }
+function dayKey(loc, iso) { return [iso, loc.lat.toFixed(2), loc.lng.toFixed(2), loc.tz, S.source, S.mp, S.asr].join('|'); }
+function tzName(tz) { return tz === 8 ? 'Asia/Makassar' : tz === 9 ? 'Asia/Jayapura' : 'Asia/Jakarta'; }
+
+async function fetchKemenag(loc, iso) {
+  const kw = kemenagKeyword(loc.area); if (!kw) return null;
+  const [y, m, d] = iso.split('-'), enc = encodeURIComponent;
+  const bases = [
+    { s: 'https://api.myquran.com/v2/sholat/kota/cari/' + enc(kw.name), j: id => 'https://api.myquran.com/v2/sholat/jadwal/' + id + '/' + y + '/' + m + '/' + d },
+    { s: 'https://api.myquran.com/v3/sholat/kabkota/cari/' + enc(kw.name), j: id => 'https://api.myquran.com/v3/sholat/jadwal/' + id + '/' + iso + '?tz=' + tzName(loc.tz) }
+  ];
+  for (const b of bases) {
+    try {
+      const pick = pickCity(findList(await getJSON(b.s)), kw); if (!pick) continue;
+      const sch = findSchedule(await getJSON(b.j(pick.id))); if (!sch) continue;
+      const t = { imsak: normHM(sch.imsak), subuh: normHM(sch.subuh), terbit: normHM(sch.terbit), dhuha: normHM(sch.dhuha), dzuhur: normHM(sch.dzuhur || sch.dhuhur), ashar: normHM(sch.ashar), maghrib: normHM(sch.maghrib), isya: normHM(sch.isya) };
+      if (!t.subuh || !t.dzuhur || !t.ashar || !t.maghrib || !t.isya) continue;
+      const own = calcFor(loc, iso);
+      ['imsak', 'terbit', 'dhuha'].forEach(k => { if (!t[k]) t[k] = own[k]; });
+      return { times: t, kind: 'resmi', label: String(pick.lokasi || pick.nama || pick.name || kw.name) };
+    } catch (e) { /* coba sumber berikutnya */ }
+  }
+  return null;
+}
+function calcResult(loc, iso, fallback) {
+  return { times: calcFor(loc, iso), kind: fallback ? 'cadangan' : 'hitung', label: '' };
+}
+async function loadDay(force) {
+  const loc = curLoc(), iso = cityToday(loc.tz), key = dayKey(loc, iso);
+  const cached = store.get('ws.day', null);
+  if (!force && cached && cached.key === key && cached.times) {
+    DAY = cached; DAY_DATE = iso; refreshNext(); render(); scheduleReminders(); return;
+  }
+  // tampilkan hitungan lokal dulu agar layar tidak kosong, lalu ambil data resmi bila dipilih
+  const first = calcResult(loc, iso, false);
+  DAY = Object.assign({ key, date: iso, at: Date.now(), pending: S.source === 'kemenag' }, first); DAY_DATE = iso;
+  refreshNext(); render(); scheduleReminders();
+  if (S.source === 'kemenag') {
+    let online = null;
+    try { online = await fetchKemenag(loc, iso); } catch (e) { }
+    if (dayKey(curLoc(), cityToday(curLoc().tz)) !== key) return; // pengaturan berubah di tengah jalan
+    DAY = online ? Object.assign({ key, date: iso, at: Date.now() }, online) : Object.assign({ key, date: iso, at: Date.now() }, calcResult(loc, iso, true));
+  } else DAY.pending = false;
+  store.set('ws.day', DAY); refreshNext(); render(); scheduleReminders();
+}
+
+// ---------- Susunan acara hari ini ----------
+function buildEvents(day, iso, tz) {
+  const defs = [['imsak', 'Imsak', S.imsak, 1], ['subuh', 'Subuh', true, 0], ['terbit', 'Terbit', true, 1], ['dhuha', 'Dhuha', S.dhuha, 1], ['dzuhur', 'Dzuhur', true, 0], ['ashar', 'Ashar', true, 0], ['maghrib', 'Maghrib', true, 0], ['isya', 'Isya', true, 0]];
+  return defs.filter(d => d[2]).map(d => {
+    const hm = day.times[d[0]] || '--:--';
+    return { k: d[0], label: d[1], hm, t: /^\d\d:\d\d$/.test(hm) ? epochOf(iso, hm, tz) : NaN, minor: !!d[3] };
+  });
+}
+let PREV = null;
+function refreshNext() {
+  if (!DAY) { NEXT = null; EVS = []; return; }
+  const loc = curLoc(), iso = DAY_DATE, now = Date.now();
+  EVS = buildEvents(DAY, iso, loc.tz);
+  NEXT = EVS.find(e => e.k !== 'terbit' && e.t > now) || null;
+  PREV = null; for (const e of EVS) if (e.t <= now) PREV = e;
+  if (!NEXT) {
+    const tom = addDays(iso, 1), tt = calcFor(loc, tom), k = S.imsak ? 'imsak' : 'subuh';
+    NEXT = { k, label: k === 'imsak' ? 'Imsak' : 'Subuh', hm: tt[k], t: epochOf(tom, tt[k], loc.tz), tomorrow: true };
+  }
+}
+
+// ---------- Tampilan ----------
+const ICON = {
+  jadwal: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  kalender: '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>',
+  widget: '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
+  pengaturan: '<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/>',
+  pin: '<path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>',
+  bell: '<path d="M6 17h12l-1.5-2.5V10a4.5 4.5 0 0 0-9 0v4.5L6 17z"/><path d="M10 20a2 2 0 0 0 4 0"/>',
+  belloff: '<path d="M6 17h12l-1.5-2.5V10a4.5 4.5 0 0 0-9 0v4.5L6 17z"/><path d="M10 20a2 2 0 0 0 4 0M4 4l16 16"/>',
+  prev: '<path d="M15 5l-7 7 7 7"/>', next: '<path d="M9 5l7 7-7 7"/>'
+};
+const svgI = (n, c) => '<svg class="' + (c || 'ic') + '" viewBox="0 0 24 24" aria-hidden="true">' + ICON[n] + '</svg>';
+const TABS = [['jadwal', 'Jadwal'], ['kalender', 'Kalender'], ['widget', 'Widget'], ['pengaturan', 'Pengaturan']];
+const getRoute = () => { const h = (location.hash || '#jadwal').slice(1); return TABS.some(t => t[0] === h) ? h : 'jadwal'; };
+
+function sourceInfo() {
+  const l = curLoc();
+  if (!DAY) return { head: 'Memuat…', sub: '', cls: '' };
+  if (DAY.kind === 'resmi') return { head: 'Kemenag RI · data resmi', sub: DAY.label + ' (tingkat kabupaten/kota)', cls: 'ok' };
+  const where = l.mode === 'gps' ? 'titik GPS' + (l.acc ? ' (±' + l.acc + ' m)' : '') : l.mode === 'default' ? 'lokasi contoh' : 'titik lokasi pilihan';
+  if (S.source === 'muslimpro') return { head: 'Muslim Pro · metode ' + (MP_METHODS.find(m => m[0] === S.mp) || [0, S.mp])[1], sub: 'Dihitung di ' + where + ' · Ashar ' + (S.asr === 'hanafi' ? 'Hanafi' : "Syafi'i"), cls: '' };
+  if (DAY.pending) return { head: 'Kemenag RI · menghubungi server…', sub: 'Sementara memakai hitungan parameter Kemenag di ' + where, cls: '' };
+  if (DAY.kind === 'cadangan') return { head: 'Kemenag RI · hitungan cadangan', sub: 'Data resmi tidak terjangkau; dihitung dengan parameter Kemenag (Subuh −20°, Isya −18°, ihtiyat +2 menit) di ' + where, cls: 'warn' };
+  return { head: 'Kemenag RI · parameter resmi', sub: 'Dihitung tepat di ' + where + ' (Subuh −20°, Isya −18°, ihtiyat +2 menit)', cls: '' };
+}
+
+function studs() {
+  let s = '';
+  for (let i = 0; i < 40; i++) { const a = i / 40 * Math.PI * 2; s += '<circle cx="' + (130 + 118 * Math.cos(a)).toFixed(1) + '" cy="' + (130 + 118 * Math.sin(a)).toFixed(1) + '" r="2.1" class="stud"/>'; }
+  return s;
+}
+function viewJadwal() {
+  const l = curLoc(), iso = DAY_DATE || cityToday(l.tz), h = hijriOf(iso), src = sourceInfo(), now = Date.now();
+  let banner = '';
+  if (l.mode === 'default') banner = '<div class="card note"><p><b>Lokasi belum diatur.</b> Jadwal di bawah memakai Jakarta sebagai contoh. Gunakan GPS agar waktu dihitung tepat di kelurahan Anda.</p><button class="btn" data-act="gps">' + svgI('pin') + 'Gunakan GPS</button>' + (GPS_NOTE ? '<p class="warn-t">' + esc(GPS_NOTE) + '</p>' : '') + '</div>';
+  let hero = '<div class="hero"><div class="ring"><svg viewBox="0 0 260 260" aria-hidden="true"><circle cx="130" cy="130" r="126" class="rim"/>' + studs() + '<circle cx="130" cy="130" r="100" class="track"/><circle id="arc" cx="130" cy="130" r="100" class="arc" stroke-dasharray="628.3" stroke-dashoffset="628.3"/></svg><div class="ring-c"><span class="next-l">' + (NEXT && NEXT.tomorrow ? 'Berikutnya · besok' : 'Berikutnya') + '</span><span class="next-n">' + esc(NEXT ? NEXT.label : '—') + '</span><span class="next-t">' + esc(NEXT ? NEXT.hm : '--:--') + '</span><span class="next-cd" id="cd"> </span></div></div></div>';
+  const rows = EVS.map(e => {
+    const past = e.t <= now && !(NEXT && !NEXT.tomorrow && NEXT.k === e.k);
+    const isNext = NEXT && !NEXT.tomorrow && NEXT.k === e.k;
+    const bellable = e.k !== 'terbit';
+    const on = S.remind && S.rem[e.k];
+    return '<div class="row' + (e.minor ? ' minor' : '') + (past ? ' past' : '') + (isNext ? ' next' : '') + '"><span class="nm">' + esc(e.label) + '</span><span class="tm">' + esc(e.hm) + '</span>' +
+      (bellable ? '<button class="bell' + (on ? ' on' : '') + '" data-act="bell" data-k="' + e.k + '" aria-label="Pengingat ' + esc(e.label) + (on ? ' aktif' : ' mati') + '" aria-pressed="' + (on ? 'true' : 'false') + '">' + svgI(on ? 'bell' : 'belloff') + '</button>' : '<span class="bell-sp"></span>') + '</div>';
+  }).join('');
+  return banner +
+    '<button class="locchip" data-go="pengaturan">' + svgI('pin') + '<span class="lc-t"><b>' + esc(locTitle(l)) + '</b><small>' + esc(locSub(l) || coordText(l)) + ' · ' + tzLabel(l.tz) + '</small></span></button>' +
+    '<p class="datel">' + esc(fmtLong(iso)) + (h ? '<br><span class="hij">' + esc(hijriText(h)) + (h.est ? ' ≈' : '') + '</span>' : '') + '</p>' +
+    hero + '<div class="list">' + rows + '</div>' +
+    '<div class="card src ' + src.cls + '"><b>' + esc(src.head) + '</b><span>' + esc(src.sub) + '</span></div>' +
+    (S.remind ? '' : '<p class="hint">Ketuk ikon lonceng untuk mengaktifkan pengingat. Pengingat berbunyi selama aplikasi terbuka.</p>') +
+    '<p class="foot">Waktu Sholat · Developed by Ongarand</p>';
+}
+
+function viewWidget() {
+  const l = curLoc(), iso = DAY_DATE || cityToday(l.tz), h = hijriOf(iso), src = sourceInfo(), now = Date.now();
+  const cells = EVS.map(e => {
+    const isNext = NEXT && !NEXT.tomorrow && NEXT.k === e.k, past = e.t <= now && !isNext;
+    return '<div class="wc' + (isNext ? ' next' : '') + (past ? ' past' : '') + (e.minor ? ' minor' : '') + '"><span>' + esc(e.label) + '</span><b>' + esc(e.hm) + '</b></div>';
+  }).join('');
+  const at = DAY && DAY.at ? new Date(DAY.at + l.tz * 3600000) : null;
+  const atT = at ? pad(at.getUTCHours()) + ':' + pad(at.getUTCMinutes()) : '';
+  return '<section class="widget" aria-label="Widget waktu sholat hari ini"><div class="w-head">' + LOGO('w-logo') + '<div><b>Waktu Sholat</b><small>' + esc(locTitle(l)) + ' · ' + tzLabel(l.tz) + '</small></div></div>' +
+    '<p class="w-date">' + esc(fmtLong(iso)) + (h ? ' · ' + esc(hijriText(h)) : '') + '</p><div class="w-grid">' + cells + '</div>' +
+    '<p class="w-foot">Dimuat sekali untuk hari ini' + (atT ? ' pukul ' + atT : '') + ' · ' + esc(src.head.split(' · ')[0]) + '</p></section>' +
+    '<p class="hint">Mode widget memuat data satu kali per hari dan tidak menyegarkan sepanjang hari. Data baru dimuat otomatis saat hari berganti. Simpan halaman ini sebagai pintasan "Widget hari ini" di layar utama.</p>';
+}
+
+function calIndex() {
+  const l = curLoc(), h = hijriOf(cityToday(l.tz));
+  if (CAL_IDX != null) return CAL_IDX;
+  return h ? h.idx : 0;
+}
+function viewKalender() {
+  const l = curLoc(), today = cityToday(l.tz), th = hijriOf(today);
+  const last = KH.length - 2; let idx = Math.min(Math.max(calIndex(), 0), last); CAL_IDX = idx;
+  const seg = '<div class="seg" role="group" aria-label="Tampilan kalender"><button data-act="calview" data-v="bulan" aria-pressed="' + (S.calView === 'bulan') + '">Bulan</button><button data-act="calview" data-v="daftar" aria-pressed="' + (S.calView === 'daftar') + '">Daftar bulan</button></div>';
+  const head = '<div class="card hnow"><span class="k">Hari ini</span><b>' + (th ? esc(hijriText(th)) + (th.est ? ' ≈' : '') : 'di luar tabel KHGT') + '</b><span>' + esc(fmtLong(today)) + '</span></div>';
+  let body = '';
+  if (S.calView === 'daftar') {
+    body = '<div class="list tbl">' + KH.slice(0, -1).map((k, i) => {
+      const len = dayNum(KH[i + 1][0]) - dayNum(k[0]), cur = th && th.idx === i;
+      return '<button class="row trow' + (cur ? ' next' : '') + '" data-act="calgo" data-i="' + i + '"><span class="nm">' + esc(HMONTHS[k[2] - 1]) + ' ' + k[1] + ' H' + (k[3] ? ' <i class="est" title="Hasil hitung KHGT">≈</i>' : '') + '</span><span class="tm sm">' + esc(DAYS_ID[dowOf(k[0])].slice(0, 3) + ', ' + fmtMid(k[0])) + '</span><span class="len">' + len + ' hari</span></button>';
+    }).join('') + '</div>';
+  } else {
+    const k = KH[idx], start = k[0], len = dayNum(KH[idx + 1][0]) - dayNum(start), lead = dowOf(start);
+    const endIso = addDays(start, len - 1);
+    let cells = ''; for (let i = 0; i < lead; i++) cells += '<span class="cell empty"></span>';
+    const evs = [];
+    for (let d = 1; d <= len; d++) {
+      const iso = addDays(start, d - 1), ev = HEVENTS[k[2] + '-' + d], isT = iso === today, abd = d >= 13 && d <= 15, fri = dowOf(iso) === 5;
+      const greg = dayNum(iso) - dayNum(start) === 0 || iso.endsWith('-01') ? fmtShort(iso) : String(+iso.slice(8));
+      if (ev) evs.push([d, iso, ev]);
+      cells += '<span class="cell' + (isT ? ' today' : '') + (ev ? ' ev' : '') + (fri ? ' fri' : '') + (abd ? ' abd' : '') + '"><b>' + d + '</b><small>' + greg + '</small></span>';
+    }
+    body = '<div class="calnav"><button class="icb" data-act="calprev" aria-label="Bulan sebelumnya"' + (idx <= 0 ? ' disabled' : '') + '>' + svgI('prev') + '</button><div class="cm"><b>' + esc(HMONTHS[k[2] - 1]) + ' ' + k[1] + ' H' + (k[3] ? ' <i class="est">≈</i>' : '') + '</b><small>' + esc(fmtMid(start) + ' – ' + fmtMid(endIso)) + ' · ' + len + ' hari</small></div><button class="icb" data-act="calnext" aria-label="Bulan berikutnya"' + (idx >= last ? ' disabled' : '') + '>' + svgI('next') + '</button></div>' +
+      '<div class="calgrid"><span class="dow">Min</span><span class="dow">Sen</span><span class="dow">Sel</span><span class="dow">Rab</span><span class="dow">Kam</span><span class="dow">Jum</span><span class="dow">Sab</span>' + cells + '</div>' +
+      '<div class="card evl"><b>Hari penting</b>' + (evs.length ? evs.map(e => '<div class="ei"><span>' + e[0] + ' ' + esc(HMONTHS[k[2] - 1]) + '</span><span>' + esc(e[2]) + ' · ' + esc(fmtLong(e[1])) + '</span></div>').join('') : '<span class="muted">Tidak ada hari besar pada bulan ini.</span>') + '<div class="ei"><span>13–15</span><span>Ayyamul Bidh (puasa sunnah)</span></div></div>' +
+      (idx !== (th ? th.idx : -1) ? '<button class="btn ghost" data-act="caltoday">Kembali ke bulan ini</button>' : '');
+  }
+  return head + seg + body +
+    '<div class="card fine"><b>Kalender Hijriah Global Tunggal (KHGT)</b><span>Kalender Muhammadiyah: awal bulan ditetapkan serempak di seluruh dunia bila di mana pun di bumi tinggi bulan ≥ 5° dan elongasi ≥ 8° saat matahari terbenam. Tanggal berganti pukul 00:00. Tanda ≈ berarti awal bulan dihitung dengan kriteria KHGT dan belum dikonfirmasi tabel resmi Muhammadiyah. Tabel tersedia untuk 1447–1449 H. Penetapan pemerintah (Kemenag) dapat berbeda satu hari.</span></div>' +
+    '<p class="foot">Waktu Sholat · Developed by Ongarand</p>';
+}
+
+function viewPengaturan() {
+  const l = curLoc();
+  const sw = (key, label, sub, checked) => '<label class="field"><span><b>' + label + '</b>' + (sub ? '<small>' + sub + '</small>' : '') + '</span><span class="sw"><input type="checkbox" data-set="' + key + '"' + (checked ? ' checked' : '') + '><i></i></span></label>';
+  const segBtn = (key, v, t, cur) => '<button data-set-btn="' + key + '" data-v="' + v + '" aria-pressed="' + (cur === v) + '">' + t + '</button>';
+  const srcDesc = { kemenag: 'Data resmi Bimas Islam Kemenag RI per kabupaten/kota. Bila server tidak terjangkau, otomatis dihitung dengan parameter Kemenag di titik GPS Anda.', 'muslimpro': 'Metode hitung seperti aplikasi Muslim Pro, dihitung tepat di titik GPS (kelurahan). Pilih metode dan mazhab Ashar.' };
+  const resList = RESULTS ? '<div class="list reslist">' + (RESULTS.length ? RESULTS.map((r, i) => '<button class="row" data-act="pick" data-i="' + i + '"><span class="nm">' + esc((r.area && (r.area.kel || r.area.kec)) || r.label.split(',')[0]) + '<small>' + esc(r.label) + '</small></span></button>').join('') : '<p class="muted pad">Tidak ada hasil.</p>') + '</div>' : '';
+  return '<div class="sec"><h2>Lokasi</h2><div class="card"><div class="curloc">' + svgI('pin') + '<span><b>' + esc(locTitle(l)) + '</b><small>' + esc(locSub(l) || 'Kelurahan belum terdeteksi') + '</small><small>' + esc(coordText(l)) + ' · ' + tzLabel(l.tz) + (l.mode === 'gps' ? ' · GPS' + (l.acc ? ' ±' + l.acc + ' m' : '') : l.mode === 'default' ? ' · contoh' : '') + '</small></span></div>' +
+    '<button class="btn" data-act="gps"' + (BUSY ? ' disabled' : '') + '>' + svgI('pin') + (BUSY || 'Gunakan GPS (tingkat kelurahan)') + '</button>' + (GPS_NOTE ? '<p class="warn-t">' + esc(GPS_NOTE) + '</p>' : '') +
+    '<label class="lbl" for="q">Cari kelurahan atau desa</label><div class="sr"><input id="q" type="search" placeholder="Contoh: Kelurahan Menteng, Jakarta Pusat" enterkeyhint="search" autocomplete="off"><button class="btn sm" data-act="search"' + (SEARCHING ? ' disabled' : '') + '>' + (SEARCHING ? 'Mencari…' : 'Cari') + '</button></div>' + resList +
+    '<label class="lbl" for="city">Atau pilih kota</label><select id="city" data-city><option value="">Pilih kota…</option>' + CITIES.map(c => '<option value="' + c[0] + '">' + esc(c[1]) + ' (' + tzLabel(c[4]) + ')</option>').join('') + '</select></div></div>' +
+    '<div class="sec"><h2>Sumber waktu sholat</h2><div class="card"><div class="seg three" role="group" aria-label="Sumber">' + segBtn('source', 'kemenag', 'Kemenag (resmi)', S.source === 'kemenag' ? 'kemenag' : '') + segBtn('source', 'kemenag-gps', 'Kemenag (titik GPS)', S.source) + segBtn('source', 'muslimpro', 'Muslim Pro', S.source) + '</div>' +
+    '<p class="muted">' + esc(S.source === 'muslimpro' ? srcDesc.muslimpro : S.source === 'kemenag-gps' ? 'Parameter Kemenag (Subuh −20°, Isya −18°, ihtiyat +2 menit, Ashar Syafi\'i) dihitung tepat di koordinat Anda sehingga mengikuti kelurahan, bukan hanya kota.' : srcDesc.kemenag) + '</p>' +
+    (S.source === 'muslimpro' ? '<label class="lbl" for="mp">Metode hitung</label><select id="mp" data-set="mp">' + MP_METHODS.map(m => '<option value="' + m[0] + '"' + (S.mp === m[0] ? ' selected' : '') + '>' + esc(m[1]) + '</option>').join('') + '</select><div class="seg" role="group" aria-label="Mazhab Ashar">' + segBtn('asr', 'shafi', "Ashar Syafi'i", S.asr) + segBtn('asr', 'hanafi', 'Ashar Hanafi', S.asr) + '</div>' : '') +
+    '<p class="muted">Selisih antar kelurahan di kota yang sama biasanya hanya hitungan detik hingga sekitar satu menit.</p></div></div>' +
+    '<div class="sec"><h2>Tampilkan di jadwal</h2><div class="card nopad">' + sw('imsak', 'Imsak (imsakiyah)', '10 menit sebelum Subuh', S.imsak) + sw('dhuha', 'Waktu Dhuha', 'Mulai saat matahari setinggi 4,5°', S.dhuha) + '</div></div>' +
+    '<div class="sec"><h2>Pengingat</h2><div class="card nopad">' + sw('remind', 'Aktifkan pengingat', 'Notifikasi dan bunyi saat waktu tiba. Berjalan selama aplikasi terbuka.', S.remind) +
+    '<label class="field"><span><b>Ingatkan</b></span><select data-set="lead" data-num>' + [[0, 'Tepat waktu'], [5, '5 menit sebelum'], [10, '10 menit sebelum'], [15, '15 menit sebelum']].map(o => '<option value="' + o[0] + '"' + (S.lead === o[0] ? ' selected' : '') + '>' + o[1] + '</option>').join('') + '</select></label>' +
+    sw('sound', 'Bunyi pengingat', '', S.sound) + '<div class="field"><span><b>Coba pengingat</b></span><button class="btn sm" data-act="testrem">Uji bunyi</button></div></div></div>' +
+    '<div class="sec"><h2>Tampilan</h2><div class="card"><div class="seg three" role="group" aria-label="Tema">' + segBtn('theme', 'auto', 'Otomatis', S.theme) + segBtn('theme', 'light', 'Terang', S.theme) + segBtn('theme', 'dark', 'Gelap', S.theme) + '</div></div></div>' +
+    '<div class="sec"><h2>Data</h2><div class="card"><p class="muted">Jadwal hari ini dimuat sekali dan disimpan sepanjang hari. Muat ulang hanya bila Anda ingin mengambil data terbaru secara manual.</p><button class="btn ghost" data-act="reload">Muat ulang data hari ini</button></div></div>' +
+    '<div class="sec"><h2>Tentang</h2><div class="card about">' + LOGO('ab-logo') + '<div><b>Waktu Sholat</b><span>Developed by Ongarand</span><small>Kalender Hijriah mengikuti KHGT Muhammadiyah. Widget layar utama bawaan ponsel membutuhkan aplikasi native; di versi ini gunakan tab Widget sebagai pintasan.</small></div></div></div>' +
+    '<p class="foot">Waktu Sholat · Developed by Ongarand</p>';
+}
+
+function render() {
+  const r = getRoute(), v = $('#view'); if (!v) return;
+  const focus = document.activeElement && document.activeElement.id, selStart = document.activeElement && document.activeElement.selectionStart;
+  const qv = $('#q') ? $('#q').value : null;
+  v.innerHTML = r === 'jadwal' ? viewJadwal() : r === 'widget' ? viewWidget() : r === 'kalender' ? viewKalender() : viewPengaturan();
+  $('#tabs-in').innerHTML = TABS.map(t => '<button class="tab" data-go="' + t[0] + '"' + (t[0] === r ? ' aria-current="page"' : '') + '>' + svgI(t[0]) + '<span>' + t[1] + '</span></button>').join('');
+  if (r === 'pengaturan') {
+    const c = $('#city'); if (c) c.value = '';
+    if (qv != null && $('#q')) { $('#q').value = qv; if (focus === 'q') { $('#q').focus(); try { $('#q').setSelectionRange(selStart, selStart); } catch (e) { } } }
+  }
+  document.body.classList.toggle('is-widget', r === 'widget');
+  tick();
+}
+function tick() {
+  const cd = $('#cd'), arc = $('#arc');
+  if (!NEXT) return;
+  const now = Date.now();
+  if (DAY_DATE && cityToday(curLoc().tz) !== DAY_DATE) { loadDay(false); return; }
+  if (now >= NEXT.t) { refreshNext(); render(); return; }
+  if (cd) {
+    const s = Math.max(0, Math.round((NEXT.t - now) / 1000)), hh = Math.floor(s / 3600), mm = Math.floor(s % 3600 / 60), ss = s % 60;
+    cd.textContent = 'dalam ' + (hh ? hh + ' j ' : '') + pad(mm) + ' m ' + pad(ss) + ' d';
+  }
+  if (arc) {
+    const start = PREV && PREV.t < NEXT.t ? PREV.t : NEXT.t - 6 * 3600000;
+    const p = Math.min(1, Math.max(0, (now - start) / (NEXT.t - start)));
+    arc.setAttribute('stroke-dashoffset', (628.3 * (1 - p)).toFixed(1));
+  }
+}
+
+// ---------- Interaksi ----------
+document.addEventListener('click', ev => {
+  const g = ev.target.closest('[data-go]');
+  if (g) { const to = g.getAttribute('data-go'); if (getRoute() === to) { render(); } else { location.hash = '#' + to; render(); } window.scrollTo(0, 0); return; }
+  const sb = ev.target.closest('[data-set-btn]');
+  if (sb) {
+    const k = sb.getAttribute('data-set-btn'), v = sb.getAttribute('data-v');
+    S[k] = v; save();
+    if (k === 'theme') applyTheme();
+    render(); if (k === 'source' || k === 'asr') loadDay(false);
+    return;
+  }
+  const a = ev.target.closest('[data-act]'); if (!a) return;
+  const act = a.getAttribute('data-act');
+  if (act === 'gps') doGPS();
+  else if (act === 'search') doSearch($('#q') && $('#q').value);
+  else if (act === 'pick') pickResult(+a.getAttribute('data-i'));
+  else if (act === 'reload') { store.del('ws.day'); loadDay(true); toast('Memuat ulang data hari ini…'); }
+  else if (act === 'bell') {
+    const k = a.getAttribute('data-k');
+    if (!S.remind) { enableReminders().then(ok => { if (ok) { S.rem[k] = true; save(); render(); scheduleReminders(); } }); return; }
+    S.rem[k] = !S.rem[k]; save(); render(); scheduleReminders();
+  }
+  else if (act === 'testrem') { toast('Contoh pengingat: waktu Dzuhur'); if (S.sound) beep(); systemNotify('Waktu Sholat', 'Contoh pengingat: waktu Dzuhur'); }
+  else if (act === 'calview') { S.calView = a.getAttribute('data-v'); save(); render(); }
+  else if (act === 'calprev') { CAL_IDX = Math.max(0, calIndex() - 1); render(); }
+  else if (act === 'calnext') { CAL_IDX = Math.min(KH.length - 2, calIndex() + 1); render(); }
+  else if (act === 'caltoday') { CAL_IDX = null; render(); }
+  else if (act === 'calgo') { CAL_IDX = +a.getAttribute('data-i'); S.calView = 'bulan'; save(); render(); window.scrollTo(0, 0); }
+});
+document.addEventListener('keydown', ev => { if (ev.key === 'Enter' && ev.target && ev.target.id === 'q') doSearch(ev.target.value); });
+async function enableReminders() {
+  try {
+    if ('Notification' in window && Notification.permission === 'default') { await Notification.requestPermission(); }
+  } catch (e) { }
+  S.remind = true; save();
+  const granted = ('Notification' in window) && Notification.permission === 'granted';
+  toast(granted ? 'Pengingat aktif. Aplikasi harus tetap terbuka.' : 'Pengingat aktif dengan bunyi dan pesan di layar (notifikasi sistem tidak diizinkan).');
+  return true;
+}
+document.addEventListener('change', async ev => {
+  const t = ev.target;
+  if (t.matches('[data-city]')) { if (t.value) pickCityId(t.value); return; }
+  const k = t.getAttribute && t.getAttribute('data-set'); if (!k) return;
+  if (k === 'remind') {
+    if (t.checked) { await enableReminders(); } else { S.remind = false; save(); }
+    render(); scheduleReminders(); return;
+  }
+  S[k] = t.type === 'checkbox' ? t.checked : t.hasAttribute('data-num') ? +t.value : t.value;
+  save();
+  if (k === 'mp') { render(); loadDay(false); return; }
+  if (k === 'imsak' || k === 'dhuha') { refreshNext(); render(); scheduleReminders(); return; }
+  if (k === 'lead' || k === 'sound') { scheduleReminders(); }
+});
+window.addEventListener('hashchange', () => { render(); window.scrollTo(0, 0); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { tick(); scheduleReminders(); } });
+
+// ---------- Mulai ----------
+function init() {
+  applyTheme(); render();
+  try { if (location.protocol === 'https:' && 'serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => { }); } catch (e) { }
+  loadDay(false);
+  setInterval(tick, 1000);
+  // perbarui titik GPS secara senyap bila izin sudah diberikan sebelumnya
+  try {
+    if (navigator.permissions && navigator.permissions.query && (!S.loc || S.loc.mode === 'gps')) {
+      navigator.permissions.query({ name: 'geolocation' }).then(p => { if (p.state === 'granted') doGPS(); }).catch(() => { });
+    }
+  } catch (e) { }
+}
+init();
+
+</script>
+
+</body></html>
