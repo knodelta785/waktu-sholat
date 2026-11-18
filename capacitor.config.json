@@ -1,0 +1,7 @@
+{
+  "appId": "id.ongarand.waktusholat",
+  "appName": "Waktu Sholat",
+  "webDir": "www",
+  "server": { "androidScheme": "https" },
+  "plugins": { "CapacitorHttp": { "enabled": true } }
+}

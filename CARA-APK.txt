@@ -1,0 +1,3 @@
+Berkas ini membangun APK Waktu Sholat otomatis di GitHub Actions.
+Letakkan di folder repositori yang sama dengan index.html, lalu commit dan push.
+APK muncul di tab Releases repositori (berkas Waktu-Sholat.apk).
