@@ -117,6 +117,7 @@ public class WsWidget extends AppWidgetProvider {{
     /** Mengisi tampilan. Mengembalikan jeda (ms) sampai pembaruan berikutnya. */
     static long fill(Context c, RemoteViews rv) {{
         String raw = c.getSharedPreferences("ws_widget", 0).getString("json", "");
+        if (raw == null || raw.length() < 5) raw = c.getSharedPreferences("CapacitorStorage", 0).getString("ws_widget_json", "");
         JSONObject day = null;
         int nowMin = 0, sec = 0;
         try {{
@@ -152,6 +153,7 @@ public class WsWidget extends AppWidgetProvider {{
         }}
         long waitMin;
         if (next >= 0) waitMin = nextMin + 1 - nowMin;
+        else if (day == null) waitMin = 5;
         else waitMin = 24 * 60 + 5 - nowMin;
         if (waitMin < 1) waitMin = 1;
         long ms = (waitMin * 60L - sec) * 1000L;
@@ -291,7 +293,7 @@ print("Azan terpasang:", [a["id"] for a in azan_list] or "tidak ada (taruh azan/
 bg = os.path.join(AND, "app", "build.gradle")
 g = open(bg, encoding="utf-8").read()
 g = re.sub(r"versionCode\s+\d+", f"versionCode {BUILD_NUM}", g, count=1)
-g = re.sub(r'versionName\s+"[^"]*"', f'versionName "1.1.{BUILD_NUM}"', g, count=1)
+g = re.sub(r'versionName\s+"[^"]*"', f'versionName "1.2.{BUILD_NUM}"', g, count=1)
 ks = os.environ.get("KS_FILE", "")
 if ks and os.path.exists(ks) and "wsrelease" not in g:
     g += f"""

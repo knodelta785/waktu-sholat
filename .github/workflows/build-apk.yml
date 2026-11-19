@@ -27,7 +27,7 @@ jobs:
       - name: Siapkan berkas web
         run: |
           mkdir -p www
-          cp index.html manifest.webmanifest icon.svg icon-192.png icon-512.png icon-maskable-512.png www/
+          cp index.html manifest.webmanifest icon-192.png icon-512.png icon-maskable-512.png www/
           sed -i "s|/\*BUILD\*/0|${{ github.run_number }}|" www/index.html
           grep -c "APP_BUILD = ${{ github.run_number }}" www/index.html
 
