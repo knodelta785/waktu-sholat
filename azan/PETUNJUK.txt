@@ -1,0 +1,3 @@
+azan1.mp3 sudah terpasang. Untuk adzan kedua, taruh azan2.mp3 di folder ini.
+Nama tampilan ada di nama.txt (baris 1 untuk azan1, baris 2 untuk azan2).
+Tanpa azan2.mp3, hanya satu pilihan adzan yang muncul.

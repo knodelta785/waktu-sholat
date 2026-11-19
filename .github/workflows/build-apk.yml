@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths-ignore: ['**.md', '**.txt']
+    paths-ignore: ['**.md', '**.txt', 'app-config.json']
 
 permissions:
   contents: write
@@ -27,13 +27,36 @@ jobs:
       - name: Siapkan berkas web
         run: |
           mkdir -p www
-          cp index.html manifest.webmanifest sw.js icon.svg icon-192.png icon-512.png icon-maskable-512.png www/
+          cp index.html manifest.webmanifest icon.svg icon-192.png icon-512.png icon-maskable-512.png www/
+          sed -i "s|/\*BUILD\*/0|${{ github.run_number }}|" www/index.html
+          grep -c "APP_BUILD = ${{ github.run_number }}" www/index.html
 
       - name: Pasang Capacitor
         run: npm install
 
       - name: Tambah proyek Android
         run: npx cap add android
+
+      - name: Kunci penandatangan
+        id: ks
+        env:
+          KS_B64: ${{ secrets.KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KS_B64" ]; then
+            echo "$KS_B64" | base64 -d > "$GITHUB_WORKSPACE/ws.keystore"
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::KEYSTORE_B64 belum diatur. APK debug dipakai; update di atas versi lama akan gagal sebelum aplikasi lama dihapus."
+          fi
+
+      - name: Pasang bagian native
+        env:
+          BUILD_NUM: ${{ github.run_number }}
+          KS_PASS: ${{ secrets.KEYSTORE_PASS }}
+        run: |
+          if [ "${{ steps.ks.outputs.signed }}" = "true" ]; then export KS_FILE="$GITHUB_WORKSPACE/ws.keystore"; fi
+          python3 tools/patch_android.py
 
       - name: Pasang ikon bedug
         run: |
@@ -54,12 +77,17 @@ jobs:
 
       - name: Bangun APK
         working-directory: android
+        env:
+          KS_PASS: ${{ secrets.KEYSTORE_PASS }}
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
-
-      - name: Ganti nama APK
-        run: cp android/app/build/outputs/apk/debug/app-debug.apk Waktu-Sholat.apk
+          if [ "${{ steps.ks.outputs.signed }}" = "true" ]; then
+            ./gradlew assembleRelease --no-daemon
+            cp app/build/outputs/apk/release/app-release.apk ../Waktu-Sholat.apk
+          else
+            ./gradlew assembleDebug --no-daemon
+            cp app/build/outputs/apk/debug/app-debug.apk ../Waktu-Sholat.apk
+          fi
 
       - uses: actions/upload-artifact@v4
         with:
@@ -70,5 +98,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="apk-${{ github.run_number }}"
-          gh release create "$TAG" Waktu-Sholat.apk --title "Waktu Sholat APK #${{ github.run_number }}" --notes "Developed by Ongarand. APK debug, pasang manual di Android."
+          gh release create "apk-${{ github.run_number }}" Waktu-Sholat.apk \
+            --title "Waktu Sholat build ${{ github.run_number }}" \
+            --notes "Developed by Ongarand" --latest

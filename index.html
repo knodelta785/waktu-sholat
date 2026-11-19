@@ -163,6 +163,29 @@ nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border
 #tabs-in{display:flex;max-width:560px;margin:0 auto}
 .tab{flex:1;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 4px 8px;font-size:11.5px;color:var(--muted);min-height:56px}
 .tab[aria-current=page]{color:var(--accent);font-weight:600}
+a.btn{text-decoration:none}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.bm{font-size:12px;color:var(--accent);font-weight:600;background:color-mix(in srgb,var(--accent) 14%,transparent);padding:2px 8px;border-radius:99px}
+.scrim{position:fixed;inset:0;background:rgb(0 0 0/.45);z-index:40}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:41;background:var(--surface);border-radius:20px 20px 0 0;padding:16px max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:6px;box-shadow:0 -8px 30px rgb(0 0 0/.25)}
+.sh-h{display:flex;justify-content:space-between;align-items:baseline;padding:2px 2px 8px}
+.sh-h b{font:600 22px var(--font-d)}
+.sh-h span{font:600 20px var(--font-d);color:var(--accent);font-variant-numeric:tabular-nums}
+.opt{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+.opt.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,var(--surface))}
+.opt-b{flex:1;display:flex;align-items:center;gap:12px;border:0;background:none;text-align:left;padding:13px 14px;min-height:48px;font-weight:500}
+.rd{width:18px;height:18px;border-radius:50%;border:2px solid var(--muted);flex:none;position:relative}
+.opt.on .rd{border-color:var(--accent)}
+.opt.on .rd::after{content:"";position:absolute;inset:3px;border-radius:50%;background:var(--accent)}
+.pv{width:44px;height:44px;border:0;background:none;color:var(--accent);display:grid;place-items:center;flex:none}
+.pv .ic{fill:currentColor;stroke:none;width:18px;height:18px}
+.sh-f{display:flex;gap:8px;justify-content:flex-end;padding-top:6px}
+#force{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px}
+#force[hidden]{display:none}
+.fbox{max-width:360px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px}
+.fbox h1{font:600 26px var(--font-d);margin:0}
+.fbox p{margin:0;color:var(--muted)}
+.f-logo{width:84px;height:84px}
 @media (prefers-reduced-motion:reduce){.arc,.sw i,.sw i::after{transition:none}}
 @media (max-width:380px){.next-t{font-size:40px}.row .tm{font-size:18px}}
 </style>
@@ -175,6 +198,8 @@ nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border
 </div>
 <nav class="tabs" aria-label="Menu utama"><div id="tabs-in"></div></nav>
 <div id="toast" role="status" hidden></div>
+<div id="sheet" hidden></div>
+<div id="force" hidden></div>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
   <symbol id="bedug" viewBox="0 0 120 120">
     <rect width="120" height="120" rx="27" fill="#164a39"/>
@@ -386,7 +411,7 @@ function findList(o, depth) {
 }
 
 
-// ===== Aplikasi Waktu Sholat: lokasi, sumber data, tampilan, pengingat =====
+// ===== Aplikasi Waktu Sholat: lokasi, sumber data, tampilan, pengingat, widget, pembaruan =====
 const $ = (s, r) => (r || document).querySelector(s);
 const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
@@ -395,16 +420,31 @@ const store = {
 };
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-const DEF = {
-  source: 'kemenag', mp: 'MWL', asr: 'shafi', imsak: false, dhuha: false, remind: false, lead: 0, sound: true, theme: 'auto',
-  loc: null, calView: 'bulan', rem: { imsak: false, subuh: true, dzuhur: true, ashar: true, maghrib: true, isya: true, dhuha: false }
-};
+const APP_BUILD = /*BUILD*/0;
+const APP_VERSION = '1.1';
+const CONFIG_URL = 'https://knodelta785.github.io/waktu-sholat/app-config.json';
+const CFG_DEF = { minBuild: 0, latestBuild: 0, apkUrl: 'https://github.com/knodelta785/waktu-sholat/releases/latest', donateUrl: '', proUrl: '', message: '' };
+
+const NATIVE = !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());
+const plug = n => { try { return window.Capacitor && Capacitor.registerPlugin ? Capacitor.registerPlugin(n) : null; } catch (e) { return null; } };
+const Geo = NATIVE ? plug('Geolocation') : null;
+const LN = NATIVE ? plug('LocalNotifications') : null;
+const WB = NATIVE ? plug('WidgetBridge') : null;
+
+const LABEL = { imsak: 'Imsak', subuh: 'Subuh', terbit: 'Terbit', dhuha: 'Dhuha', dzuhur: 'Dzuhur', ashar: 'Ashar', maghrib: 'Maghrib', isya: 'Isya' };
+const FIVE = ['subuh', 'dzuhur', 'ashar', 'maghrib', 'isya'];
+const azanOK = k => FIVE.indexOf(k) >= 0;
+let AZANS = [];
+
+const DEF = { source: 'kemenag', mp: 'MWL', asr: 'shafi', imsak: false, dhuha: false, theme: 'auto', loc: null, calView: 'bulan', notif: {} };
 let S = Object.assign({}, DEF, store.get('ws.settings', {}));
-S.rem = Object.assign({}, DEF.rem, S.rem || {});
+S.notif = Object.assign({}, S.notif || {});
 const save = () => store.set('ws.settings', S);
 const deviceTz = () => -new Date().getTimezoneOffset() / 60;
+const modeOf = k => S.notif[k] || 'off';
+const modeName = m => m === 'off' ? 'Mati' : m === 'biasa' ? 'Notifikasi' : ((AZANS.find(a => a.id === m) || {}).name || 'Azan');
 
-let DAY = null, DAY_DATE = null, NEXT = null, EVS = [], BUSY = '', RESULTS = null, SEARCHING = false, CAL_IDX = null, TIMERS = [], GPS_NOTE = '';
+let DAY = null, DAY_DATE = null, NEXT = null, PREV = null, EVS = [], BUSY = '', RESULTS = null, SEARCHING = false, CAL_IDX = null, TIMERS = [], GPS_NOTE = '', SHEET = null, RCFG = Object.assign({}, CFG_DEF, store.get('ws.cfg', {})), PV = null;
 
 function curLoc() {
   if (S.loc) return S.loc;
@@ -421,7 +461,7 @@ const locSub = l => {
 };
 const coordText = l => Math.abs(l.lat).toFixed(4) + '°' + (l.lat < 0 ? 'LS' : 'LU') + ' ' + Math.abs(l.lng).toFixed(4) + '°' + (l.lng < 0 ? 'BB' : 'BT');
 
-// ---------- Tema, toast, suara, notifikasi ----------
+// ---------- Tema, toast, suara ----------
 function applyTheme() {
   const r = document.documentElement;
   if (S.theme === 'light' || S.theme === 'dark') r.setAttribute('data-theme', S.theme); else r.removeAttribute('data-theme');
@@ -430,7 +470,7 @@ let toastT = 0;
 function toast(msg) {
   const t = $('#toast'); if (!t) return;
   t.textContent = msg; t.hidden = false; clearTimeout(toastT);
-  toastT = setTimeout(() => { t.hidden = true; }, 3800);
+  toastT = setTimeout(() => { t.hidden = true; }, 3600);
 }
 function beep() {
   try {
@@ -445,40 +485,110 @@ function beep() {
     setTimeout(() => { try { ctx.close(); } catch (e) { } }, 2200);
   } catch (e) { }
 }
-function systemNotify(title, body) {
+function preview(id) {
   try {
-    if (!('Notification' in window) || Notification.permission !== 'granted') return;
-    if (navigator.serviceWorker && navigator.serviceWorker.ready) {
-      navigator.serviceWorker.ready.then(r => r.showNotification(title, { body, icon: 'icon-192.png', badge: 'icon-192.png', tag: 'waktu-sholat' })).catch(() => { try { new Notification(title, { body }); } catch (e) { } });
-    } else new Notification(title, { body });
+    stopPreview(); PV = new Audio('audio/' + id + '.mp3');
+    PV.play().catch(() => toast('Audio tidak bisa diputar.'));
   } catch (e) { }
+}
+function stopPreview() { try { if (PV) { PV.pause(); PV = null; } } catch (e) { } }
+
+// ---------- Notifikasi dan widget ----------
+let CH_DONE = false;
+async function ensureNotifPerm() {
+  try {
+    if (LN) {
+      let p = await LN.checkPermissions();
+      if (p.display !== 'granted') p = await LN.requestPermissions();
+      if (p.display !== 'granted') { toast('Izinkan notifikasi di pengaturan Android.'); return false; }
+      try { const ex = await LN.checkExactNotificationSetting(); if (ex && ex.exact_alarm && ex.exact_alarm !== 'granted') await LN.changeExactNotificationSetting(); } catch (e) { }
+      return true;
+    }
+    if ('Notification' in window && Notification.permission === 'default') await Notification.requestPermission();
+  } catch (e) { }
+  return true;
+}
+async function ensureChannels() {
+  if (!LN || CH_DONE) return;
+  try {
+    await LN.createChannel({ id: 'ws-biasa', name: 'Pengingat sholat', importance: 4, visibility: 1, vibration: true });
+    for (const a of AZANS) await LN.createChannel({ id: 'ws-' + a.id, name: 'Azan: ' + a.name, importance: 5, visibility: 1, vibration: true, sound: a.id + '.mp3' });
+    CH_DONE = true;
+  } catch (e) { }
+}
+async function scheduleNative(days, loc) {
+  if (!LN) return;
+  const pend = await LN.getPending();
+  if (pend && pend.notifications && pend.notifications.length) await LN.cancel({ notifications: pend.notifications.map(n => ({ id: n.id })) });
+  if (!Object.keys(S.notif).some(k => modeOf(k) !== 'off')) return;
+  await ensureChannels();
+  const now = Date.now(), list = [], order = ['imsak', 'subuh', 'dhuha', 'dzuhur', 'ashar', 'maghrib', 'isya'];
+  Object.keys(days).sort().forEach(iso => {
+    order.forEach((k, ki) => {
+      let m = modeOf(k); if (m === 'off') return;
+      if (m !== 'biasa' && !AZANS.some(a => a.id === m)) m = 'biasa';
+      const hm = days[iso][k]; if (!/^\d\d:\d\d$/.test(hm || '')) return;
+      const t = epochOf(iso, hm, loc.tz); if (t <= now + 5000) return;
+      const n = { id: dayNum(iso) * 10 + ki, title: 'Waktu ' + LABEL[k], body: LABEL[k] + ' ' + hm + ' ' + tzLabel(loc.tz) + ' · ' + locTitle(loc), schedule: { at: new Date(t), allowWhileIdle: true }, channelId: m === 'biasa' ? 'ws-biasa' : 'ws-' + m };
+      if (m !== 'biasa') n.sound = m + '.mp3';
+      list.push(n);
+    });
+  });
+  if (list.length) await LN.schedule({ notifications: list });
+}
+let syncT = 0;
+function syncNative() {
+  if (!NATIVE) return;
+  clearTimeout(syncT); syncT = setTimeout(doSync, 700);
+}
+async function doSync() {
+  if (!DAY || !DAY_DATE) return;
+  const loc = curLoc(), days = {};
+  for (let i = 0; i < 7; i++) { const iso = addDays(DAY_DATE, i); days[iso] = i === 0 ? DAY.times : calcFor(loc, iso); }
+  try { if (WB) await WB.update({ json: JSON.stringify({ tz: loc.tz, loc: locTitle(loc), days }) }); } catch (e) { }
+  try { await scheduleNative(days, loc); } catch (e) { }
 }
 function scheduleReminders() {
   TIMERS.forEach(clearTimeout); TIMERS = [];
-  if (!S.remind || !DAY) return;
+  if (NATIVE) { syncNative(); return; }
+  if (!DAY) return;
   const now = Date.now();
   EVS.forEach(e => {
-    if (e.k === 'terbit' || !S.rem[e.k] || !isFinite(e.t)) return;
-    const at = e.t - (S.lead || 0) * 60000, delay = at - now;
-    if (delay <= 0 || delay > 36 * 3600000) return;
+    if (e.k === 'terbit' || modeOf(e.k) === 'off' || !isFinite(e.t)) return;
+    const delay = e.t - now; if (delay <= 0 || delay > 36 * 3600000) return;
     TIMERS.push(setTimeout(() => {
-      const msg = S.lead ? e.label + ' ' + S.lead + ' menit lagi (' + e.hm + ')' : 'Waktu ' + e.label + ' (' + e.hm + ')';
-      toast(msg); if (S.sound) beep(); systemNotify('Waktu Sholat', msg);
+      const msg = 'Waktu ' + e.label + ' (' + e.hm + ')'; toast(msg); beep();
+      try { if ('Notification' in window && Notification.permission === 'granted') new Notification('Waktu Sholat', { body: msg, icon: 'icon-192.png' }); } catch (x) { }
     }, delay));
   });
 }
+async function setMode(k, m) {
+  if (m !== 'off' && !(await ensureNotifPerm())) return;
+  S.notif[k] = m; save(); render(); scheduleReminders();
+}
+async function setModeAll(m) {
+  if (m !== 'off' && !(await ensureNotifPerm())) return;
+  FIVE.forEach(k => { S.notif[k] = m; }); save(); render(); scheduleReminders(); toast('Diterapkan ke lima waktu sholat.');
+}
 
 // ---------- Lokasi ----------
-function getPos() {
+async function getPos() {
+  if (Geo) {
+    const ok = p => p && (p.location === 'granted' || p.coarseLocation === 'granted');
+    let p = await Geo.checkPermissions();
+    if (!ok(p)) p = await Geo.requestPermissions({ permissions: ['location', 'coarseLocation'] });
+    if (!ok(p)) throw { code: 1 };
+    return Geo.getCurrentPosition({ enableHighAccuracy: true, timeout: 15000, maximumAge: 120000 });
+  }
   return new Promise((res, rej) => {
     if (!navigator.geolocation) return rej({ code: 0 });
     navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 15000, maximumAge: 120000 });
   });
 }
 function gpsErrorText(e) {
-  if (e && e.code === 1) return 'Izin lokasi ditolak atau tidak tersedia di tampilan ini. Aktifkan izin lokasi, atau pilih lokasi secara manual.';
-  if (e && e.code === 0) return 'GPS tidak tersedia di perangkat ini. Pilih lokasi secara manual.';
-  return 'Lokasi belum terdeteksi. Coba lagi di tempat terbuka atau pilih lokasi secara manual.';
+  if (e && e.code === 1) return 'Izin lokasi ditolak. Izinkan lokasi di pengaturan, atau pilih lokasi manual.';
+  if (e && e.code === 0) return 'GPS tidak tersedia. Pilih lokasi manual.';
+  return 'Lokasi belum terdeteksi. Coba lagi di tempat terbuka.';
 }
 function ctl(ms) { const c = new AbortController(); setTimeout(() => c.abort(), ms); return c.signal; }
 async function getJSON(url, ms) { const r = await fetch(url, { signal: ctl(ms || 7000) }); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }
@@ -489,46 +599,45 @@ async function reverseGeocode(lat, lng) {
   } catch (e) { return null; }
 }
 async function doGPS() {
-  BUSY = 'Mencari lokasi GPS…'; GPS_NOTE = ''; render();
+  BUSY = 'Mencari lokasi…'; GPS_NOTE = ''; render();
   try {
     const p = await getPos();
     const lat = p.coords.latitude, lng = p.coords.longitude, acc = Math.round(p.coords.accuracy || 0);
     const old = S.loc;
     if (old && old.mode === 'gps' && haversine(old.lat, old.lng, lat, lng) < 0.5) { old.acc = acc; }
-    else S.loc = { mode: 'gps', lat, lng, acc, tz: deviceTz(), area: null };
+    else { const tz = tzIndonesia(lat, lng); S.loc = { mode: 'gps', lat, lng, acc, tz: tz == null ? deviceTz() : tz, area: null }; }
     save(); BUSY = ''; render(); loadDay(false);
     const loc = S.loc;
     if (!loc.area) {
       const area = await reverseGeocode(loc.lat, loc.lng);
-      if (area && S.loc === loc) { loc.area = area; save(); toast('Lokasi: ' + locTitle(loc)); loadDay(true); }
-      else if (!area) { GPS_NOTE = 'Nama kelurahan belum bisa diambil (butuh internet). Waktu tetap dihitung dari titik GPS Anda.'; render(); }
+      if (area && S.loc === loc) { loc.area = area; save(); toast(locTitle(loc)); loadDay(true); }
+      else if (!area) { GPS_NOTE = 'Nama kelurahan belum terbaca (butuh internet).'; render(); }
     }
   } catch (e) { BUSY = ''; GPS_NOTE = gpsErrorText(e); render(); toast(GPS_NOTE); }
 }
 async function doSearch(q) {
-  q = (q || '').trim(); if (q.length < 3) { toast('Tulis minimal 3 huruf, misalnya nama kelurahan dan kota.'); return; }
+  q = (q || '').trim(); if (q.length < 3) { toast('Tulis minimal 3 huruf.'); return; }
   SEARCHING = true; RESULTS = null; render();
   try {
     const j = await getJSON('https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&countrycodes=id&accept-language=id&limit=8&q=' + encodeURIComponent(q), 9000);
     RESULTS = (j || []).map(r => ({ lat: +r.lat, lng: +r.lon, label: r.display_name, area: parseArea(r.address) })).filter(r => isFinite(r.lat));
-    if (!RESULTS.length) toast('Tidak ada hasil. Coba tulis nama kelurahan dan kotanya.');
-  } catch (e) { RESULTS = []; toast('Pencarian butuh internet dan tidak tersedia saat ini.'); }
+    if (!RESULTS.length) toast('Tidak ada hasil.');
+  } catch (e) { RESULTS = []; toast('Pencarian butuh internet.'); }
   SEARCHING = false; render();
 }
 function pickResult(i) {
   const r = RESULTS && RESULTS[i]; if (!r) return;
   const tz = tzIndonesia(r.lat, r.lng);
   S.loc = { mode: 'manual', lat: r.lat, lng: r.lng, tz: tz == null ? deviceTz() : tz, area: r.area, name: (r.area && (r.area.kel || r.area.kota)) || r.label.split(',')[0] };
-  RESULTS = null; save(); render(); loadDay(false); toast('Lokasi diganti: ' + locTitle(S.loc));
+  RESULTS = null; save(); render(); loadDay(false); toast(locTitle(S.loc));
 }
 function pickCityId(id) {
   const c = CITIES.find(x => x[0] === id); if (!c) return;
   S.loc = { mode: 'city', lat: c[2], lng: c[3], tz: c[4], name: c[1], area: { kota: c[1], kotaType: 'kota' } };
-  save(); render(); loadDay(false); toast('Lokasi diganti: ' + c[1]);
+  save(); render(); loadDay(false); toast(c[1]);
 }
 
 // ---------- Data waktu sholat ----------
-const SRC_NAME = () => S.source === 'muslimpro' ? 'Muslim Pro' : 'Kemenag RI';
 function methodKey() { return S.source === 'muslimpro' ? S.mp : 'kemenag'; }
 function calcFor(loc, iso) { return calcDay(loc.lat, loc.lng, loc.tz, iso, methodKey(), S.asr); }
 function dayKey(loc, iso) { return [iso, loc.lat.toFixed(2), loc.lng.toFixed(2), loc.tz, S.source, S.mp, S.asr].join('|'); }
@@ -554,23 +663,20 @@ async function fetchKemenag(loc, iso) {
   }
   return null;
 }
-function calcResult(loc, iso, fallback) {
-  return { times: calcFor(loc, iso), kind: fallback ? 'cadangan' : 'hitung', label: '' };
-}
+function calcResult(loc, iso, fallback) { return { times: calcFor(loc, iso), kind: fallback ? 'cadangan' : 'hitung', label: '' }; }
 async function loadDay(force) {
   const loc = curLoc(), iso = cityToday(loc.tz), key = dayKey(loc, iso);
   const cached = store.get('ws.day', null);
   if (!force && cached && cached.key === key && cached.times) {
     DAY = cached; DAY_DATE = iso; refreshNext(); render(); scheduleReminders(); return;
   }
-  // tampilkan hitungan lokal dulu agar layar tidak kosong, lalu ambil data resmi bila dipilih
   const first = calcResult(loc, iso, false);
   DAY = Object.assign({ key, date: iso, at: Date.now(), pending: S.source === 'kemenag' }, first); DAY_DATE = iso;
   refreshNext(); render(); scheduleReminders();
   if (S.source === 'kemenag') {
     let online = null;
     try { online = await fetchKemenag(loc, iso); } catch (e) { }
-    if (dayKey(curLoc(), cityToday(curLoc().tz)) !== key) return; // pengaturan berubah di tengah jalan
+    if (dayKey(curLoc(), cityToday(curLoc().tz)) !== key) return;
     DAY = online ? Object.assign({ key, date: iso, at: Date.now() }, online) : Object.assign({ key, date: iso, at: Date.now() }, calcResult(loc, iso, true));
   } else DAY.pending = false;
   store.set('ws.day', DAY); refreshNext(); render(); scheduleReminders();
@@ -578,13 +684,12 @@ async function loadDay(force) {
 
 // ---------- Susunan acara hari ini ----------
 function buildEvents(day, iso, tz) {
-  const defs = [['imsak', 'Imsak', S.imsak, 1], ['subuh', 'Subuh', true, 0], ['terbit', 'Terbit', true, 1], ['dhuha', 'Dhuha', S.dhuha, 1], ['dzuhur', 'Dzuhur', true, 0], ['ashar', 'Ashar', true, 0], ['maghrib', 'Maghrib', true, 0], ['isya', 'Isya', true, 0]];
-  return defs.filter(d => d[2]).map(d => {
+  const defs = [['imsak', S.imsak, 1], ['subuh', true, 0], ['terbit', true, 1], ['dhuha', S.dhuha, 1], ['dzuhur', true, 0], ['ashar', true, 0], ['maghrib', true, 0], ['isya', true, 0]];
+  return defs.filter(d => d[1]).map(d => {
     const hm = day.times[d[0]] || '--:--';
-    return { k: d[0], label: d[1], hm, t: /^\d\d:\d\d$/.test(hm) ? epochOf(iso, hm, tz) : NaN, minor: !!d[3] };
+    return { k: d[0], label: LABEL[d[0]], hm, t: /^\d\d:\d\d$/.test(hm) ? epochOf(iso, hm, tz) : NaN, minor: !!d[2] };
   });
 }
-let PREV = null;
 function refreshNext() {
   if (!DAY) { NEXT = null; EVS = []; return; }
   const loc = curLoc(), iso = DAY_DATE, now = Date.now();
@@ -593,7 +698,7 @@ function refreshNext() {
   PREV = null; for (const e of EVS) if (e.t <= now) PREV = e;
   if (!NEXT) {
     const tom = addDays(iso, 1), tt = calcFor(loc, tom), k = S.imsak ? 'imsak' : 'subuh';
-    NEXT = { k, label: k === 'imsak' ? 'Imsak' : 'Subuh', hm: tt[k], t: epochOf(tom, tt[k], loc.tz), tomorrow: true };
+    NEXT = { k, label: LABEL[k], hm: tt[k], t: epochOf(tom, tt[k], loc.tz), tomorrow: true };
   }
 }
 
@@ -601,28 +706,26 @@ function refreshNext() {
 const ICON = {
   jadwal: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   kalender: '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>',
-  widget: '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
   pengaturan: '<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/>',
   pin: '<path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>',
   bell: '<path d="M6 17h12l-1.5-2.5V10a4.5 4.5 0 0 0-9 0v4.5L6 17z"/><path d="M10 20a2 2 0 0 0 4 0"/>',
   belloff: '<path d="M6 17h12l-1.5-2.5V10a4.5 4.5 0 0 0-9 0v4.5L6 17z"/><path d="M10 20a2 2 0 0 0 4 0M4 4l16 16"/>',
+  play: '<path d="M8 5l11 7-11 7z"/>',
   prev: '<path d="M15 5l-7 7 7 7"/>', next: '<path d="M9 5l7 7-7 7"/>'
 };
 const svgI = (n, c) => '<svg class="' + (c || 'ic') + '" viewBox="0 0 24 24" aria-hidden="true">' + ICON[n] + '</svg>';
-const TABS = [['jadwal', 'Jadwal'], ['kalender', 'Kalender'], ['widget', 'Widget'], ['pengaturan', 'Pengaturan']];
+const TABS = [['jadwal', 'Jadwal'], ['kalender', 'Kalender'], ['pengaturan', 'Pengaturan']];
 const getRoute = () => { const h = (location.hash || '#jadwal').slice(1); return TABS.some(t => t[0] === h) ? h : 'jadwal'; };
 
 function sourceInfo() {
   const l = curLoc();
-  if (!DAY) return { head: 'Memuat…', sub: '', cls: '' };
-  if (DAY.kind === 'resmi') return { head: 'Kemenag RI · data resmi', sub: DAY.label + ' (tingkat kabupaten/kota)', cls: 'ok' };
-  const where = l.mode === 'gps' ? 'titik GPS' + (l.acc ? ' (±' + l.acc + ' m)' : '') : l.mode === 'default' ? 'lokasi contoh' : 'titik lokasi pilihan';
-  if (S.source === 'muslimpro') return { head: 'Muslim Pro · metode ' + (MP_METHODS.find(m => m[0] === S.mp) || [0, S.mp])[1], sub: 'Dihitung di ' + where + ' · Ashar ' + (S.asr === 'hanafi' ? 'Hanafi' : "Syafi'i"), cls: '' };
-  if (DAY.pending) return { head: 'Kemenag RI · menghubungi server…', sub: 'Sementara memakai hitungan parameter Kemenag di ' + where, cls: '' };
-  if (DAY.kind === 'cadangan') return { head: 'Kemenag RI · hitungan cadangan', sub: 'Data resmi tidak terjangkau; dihitung dengan parameter Kemenag (Subuh −20°, Isya −18°, ihtiyat +2 menit) di ' + where, cls: 'warn' };
-  return { head: 'Kemenag RI · parameter resmi', sub: 'Dihitung tepat di ' + where + ' (Subuh −20°, Isya −18°, ihtiyat +2 menit)', cls: '' };
+  if (!DAY) return { head: 'Memuat…', cls: '' };
+  if (S.source === 'muslimpro') return { head: 'Muslim Pro · ' + (MP_METHODS.find(m => m[0] === S.mp) || [0, S.mp])[1], cls: '' };
+  if (DAY.kind === 'resmi') return { head: 'Kemenag RI · ' + DAY.label, cls: 'ok' };
+  if (S.source === 'kemenag' && DAY.pending) return { head: 'Kemenag RI · memuat data resmi…', cls: '' };
+  if (S.source === 'kemenag' && DAY.kind === 'cadangan') return { head: 'Kemenag RI · hitungan di titik Anda (data resmi tidak terjangkau)', cls: 'warn' };
+  return { head: 'Kemenag RI · hitungan di ' + (l.mode === 'gps' ? 'titik GPS' : 'titik lokasi'), cls: '' };
 }
-
 function studs() {
   let s = '';
   for (let i = 0; i < 40; i++) { const a = i / 40 * Math.PI * 2; s += '<circle cx="' + (130 + 118 * Math.cos(a)).toFixed(1) + '" cy="' + (130 + 118 * Math.sin(a)).toFixed(1) + '" r="2.1" class="stud"/>'; }
@@ -631,112 +734,102 @@ function studs() {
 function viewJadwal() {
   const l = curLoc(), iso = DAY_DATE || cityToday(l.tz), h = hijriOf(iso), src = sourceInfo(), now = Date.now();
   let banner = '';
-  if (l.mode === 'default') banner = '<div class="card note"><p><b>Lokasi belum diatur.</b> Jadwal di bawah memakai Jakarta sebagai contoh. Gunakan GPS agar waktu dihitung tepat di kelurahan Anda.</p><button class="btn" data-act="gps">' + svgI('pin') + 'Gunakan GPS</button>' + (GPS_NOTE ? '<p class="warn-t">' + esc(GPS_NOTE) + '</p>' : '') + '</div>';
-  let hero = '<div class="hero"><div class="ring"><svg viewBox="0 0 260 260" aria-hidden="true"><circle cx="130" cy="130" r="126" class="rim"/>' + studs() + '<circle cx="130" cy="130" r="100" class="track"/><circle id="arc" cx="130" cy="130" r="100" class="arc" stroke-dasharray="628.3" stroke-dashoffset="628.3"/></svg><div class="ring-c"><span class="next-l">' + (NEXT && NEXT.tomorrow ? 'Berikutnya · besok' : 'Berikutnya') + '</span><span class="next-n">' + esc(NEXT ? NEXT.label : '—') + '</span><span class="next-t">' + esc(NEXT ? NEXT.hm : '--:--') + '</span><span class="next-cd" id="cd"> </span></div></div></div>';
+  if (l.mode === 'default') banner = '<div class="card note"><p>Lokasi belum diatur. Memakai Jakarta sebagai contoh.</p><button class="btn" data-act="gps">' + svgI('pin') + 'Gunakan GPS</button>' + (GPS_NOTE ? '<p class="warn-t">' + esc(GPS_NOTE) + '</p>' : '') + '</div>';
+  if (RCFG.latestBuild > APP_BUILD && APP_BUILD > 0) banner += '<div class="card note"><p>Versi baru tersedia.</p><a class="btn" href="' + esc(RCFG.apkUrl) + '" target="_blank" rel="noopener">Perbarui</a></div>';
+  const hero = '<div class="hero"><div class="ring"><svg viewBox="0 0 260 260" aria-hidden="true"><circle cx="130" cy="130" r="126" class="rim"/>' + studs() + '<circle cx="130" cy="130" r="100" class="track"/><circle id="arc" cx="130" cy="130" r="100" class="arc" stroke-dasharray="628.3" stroke-dashoffset="628.3"/></svg><div class="ring-c"><span class="next-l">' + (NEXT && NEXT.tomorrow ? 'Berikutnya · besok' : 'Berikutnya') + '</span><span class="next-n">' + esc(NEXT ? NEXT.label : '—') + '</span><span class="next-t">' + esc(NEXT ? NEXT.hm : '--:--') + '</span><span class="next-cd" id="cd"> </span></div></div></div>';
   const rows = EVS.map(e => {
-    const past = e.t <= now && !(NEXT && !NEXT.tomorrow && NEXT.k === e.k);
-    const isNext = NEXT && !NEXT.tomorrow && NEXT.k === e.k;
+    const isNext = NEXT && !NEXT.tomorrow && NEXT.k === e.k, past = e.t <= now && !isNext, m = modeOf(e.k), on = m !== 'off';
     const bellable = e.k !== 'terbit';
-    const on = S.remind && S.rem[e.k];
-    return '<div class="row' + (e.minor ? ' minor' : '') + (past ? ' past' : '') + (isNext ? ' next' : '') + '"><span class="nm">' + esc(e.label) + '</span><span class="tm">' + esc(e.hm) + '</span>' +
-      (bellable ? '<button class="bell' + (on ? ' on' : '') + '" data-act="bell" data-k="' + e.k + '" aria-label="Pengingat ' + esc(e.label) + (on ? ' aktif' : ' mati') + '" aria-pressed="' + (on ? 'true' : 'false') + '">' + svgI(on ? 'bell' : 'belloff') + '</button>' : '<span class="bell-sp"></span>') + '</div>';
+    return '<div class="row' + (e.minor ? ' minor' : '') + (past ? ' past' : '') + (isNext ? ' next' : '') + '"><span class="nm">' + esc(e.label) + '</span>' + (on ? '<span class="bm">' + esc(modeName(m)) + '</span>' : '') + '<span class="tm">' + esc(e.hm) + '</span>' +
+      (bellable ? '<button class="bell' + (on ? ' on' : '') + '" data-act="bell" data-k="' + e.k + '" aria-label="Pengingat ' + esc(e.label) + ': ' + esc(modeName(m)) + '">' + svgI(on ? 'bell' : 'belloff') + '</button>' : '<span class="bell-sp"></span>') + '</div>';
   }).join('');
   return banner +
     '<button class="locchip" data-go="pengaturan">' + svgI('pin') + '<span class="lc-t"><b>' + esc(locTitle(l)) + '</b><small>' + esc(locSub(l) || coordText(l)) + ' · ' + tzLabel(l.tz) + '</small></span></button>' +
     '<p class="datel">' + esc(fmtLong(iso)) + (h ? '<br><span class="hij">' + esc(hijriText(h)) + (h.est ? ' ≈' : '') + '</span>' : '') + '</p>' +
     hero + '<div class="list">' + rows + '</div>' +
-    '<div class="card src ' + src.cls + '"><b>' + esc(src.head) + '</b><span>' + esc(src.sub) + '</span></div>' +
-    (S.remind ? '' : '<p class="hint">Ketuk ikon lonceng untuk mengaktifkan pengingat. Pengingat berbunyi selama aplikasi terbuka.</p>') +
-    '<p class="foot">Waktu Sholat · Developed by Ongarand</p>';
+    '<div class="card src ' + src.cls + '"><b>' + esc(src.head) + '</b></div>' +
+    '<p class="foot">Developed by Ongarand</p>';
 }
-
-function viewWidget() {
-  const l = curLoc(), iso = DAY_DATE || cityToday(l.tz), h = hijriOf(iso), src = sourceInfo(), now = Date.now();
-  const cells = EVS.map(e => {
-    const isNext = NEXT && !NEXT.tomorrow && NEXT.k === e.k, past = e.t <= now && !isNext;
-    return '<div class="wc' + (isNext ? ' next' : '') + (past ? ' past' : '') + (e.minor ? ' minor' : '') + '"><span>' + esc(e.label) + '</span><b>' + esc(e.hm) + '</b></div>';
-  }).join('');
-  const at = DAY && DAY.at ? new Date(DAY.at + l.tz * 3600000) : null;
-  const atT = at ? pad(at.getUTCHours()) + ':' + pad(at.getUTCMinutes()) : '';
-  return '<section class="widget" aria-label="Widget waktu sholat hari ini"><div class="w-head">' + LOGO('w-logo') + '<div><b>Waktu Sholat</b><small>' + esc(locTitle(l)) + ' · ' + tzLabel(l.tz) + '</small></div></div>' +
-    '<p class="w-date">' + esc(fmtLong(iso)) + (h ? ' · ' + esc(hijriText(h)) : '') + '</p><div class="w-grid">' + cells + '</div>' +
-    '<p class="w-foot">Dimuat sekali untuk hari ini' + (atT ? ' pukul ' + atT : '') + ' · ' + esc(src.head.split(' · ')[0]) + '</p></section>' +
-    '<p class="hint">Mode widget memuat data satu kali per hari dan tidak menyegarkan sepanjang hari. Data baru dimuat otomatis saat hari berganti. Simpan halaman ini sebagai pintasan "Widget hari ini" di layar utama.</p>';
-}
-
 function calIndex() {
-  const l = curLoc(), h = hijriOf(cityToday(l.tz));
   if (CAL_IDX != null) return CAL_IDX;
-  return h ? h.idx : 0;
+  const h = hijriOf(cityToday(curLoc().tz)); return h ? h.idx : 0;
 }
 function viewKalender() {
   const l = curLoc(), today = cityToday(l.tz), th = hijriOf(today);
   const last = KH.length - 2; let idx = Math.min(Math.max(calIndex(), 0), last); CAL_IDX = idx;
   const seg = '<div class="seg" role="group" aria-label="Tampilan kalender"><button data-act="calview" data-v="bulan" aria-pressed="' + (S.calView === 'bulan') + '">Bulan</button><button data-act="calview" data-v="daftar" aria-pressed="' + (S.calView === 'daftar') + '">Daftar bulan</button></div>';
-  const head = '<div class="card hnow"><span class="k">Hari ini</span><b>' + (th ? esc(hijriText(th)) + (th.est ? ' ≈' : '') : 'di luar tabel KHGT') + '</b><span>' + esc(fmtLong(today)) + '</span></div>';
+  const head = '<div class="card hnow"><span class="k">Hari ini</span><b>' + (th ? esc(hijriText(th)) + (th.est ? ' ≈' : '') : 'di luar tabel') + '</b><span>' + esc(fmtLong(today)) + '</span></div>';
   let body = '';
   if (S.calView === 'daftar') {
     body = '<div class="list tbl">' + KH.slice(0, -1).map((k, i) => {
       const len = dayNum(KH[i + 1][0]) - dayNum(k[0]), cur = th && th.idx === i;
-      return '<button class="row trow' + (cur ? ' next' : '') + '" data-act="calgo" data-i="' + i + '"><span class="nm">' + esc(HMONTHS[k[2] - 1]) + ' ' + k[1] + ' H' + (k[3] ? ' <i class="est" title="Hasil hitung KHGT">≈</i>' : '') + '</span><span class="tm sm">' + esc(DAYS_ID[dowOf(k[0])].slice(0, 3) + ', ' + fmtMid(k[0])) + '</span><span class="len">' + len + ' hari</span></button>';
+      return '<button class="row trow' + (cur ? ' next' : '') + '" data-act="calgo" data-i="' + i + '"><span class="nm">' + esc(HMONTHS[k[2] - 1]) + ' ' + k[1] + ' H' + (k[3] ? ' <i class="est">≈</i>' : '') + '</span><span class="tm sm">' + esc(DAYS_ID[dowOf(k[0])].slice(0, 3) + ', ' + fmtMid(k[0])) + '</span><span class="len">' + len + ' hari</span></button>';
     }).join('') + '</div>';
   } else {
-    const k = KH[idx], start = k[0], len = dayNum(KH[idx + 1][0]) - dayNum(start), lead = dowOf(start);
-    const endIso = addDays(start, len - 1);
+    const k = KH[idx], start = k[0], len = dayNum(KH[idx + 1][0]) - dayNum(start), lead = dowOf(start), endIso = addDays(start, len - 1);
     let cells = ''; for (let i = 0; i < lead; i++) cells += '<span class="cell empty"></span>';
     const evs = [];
     for (let d = 1; d <= len; d++) {
       const iso = addDays(start, d - 1), ev = HEVENTS[k[2] + '-' + d], isT = iso === today, abd = d >= 13 && d <= 15, fri = dowOf(iso) === 5;
-      const greg = dayNum(iso) - dayNum(start) === 0 || iso.endsWith('-01') ? fmtShort(iso) : String(+iso.slice(8));
+      const greg = iso.endsWith('-01') || d === 1 ? fmtShort(iso) : String(+iso.slice(8));
       if (ev) evs.push([d, iso, ev]);
       cells += '<span class="cell' + (isT ? ' today' : '') + (ev ? ' ev' : '') + (fri ? ' fri' : '') + (abd ? ' abd' : '') + '"><b>' + d + '</b><small>' + greg + '</small></span>';
     }
     body = '<div class="calnav"><button class="icb" data-act="calprev" aria-label="Bulan sebelumnya"' + (idx <= 0 ? ' disabled' : '') + '>' + svgI('prev') + '</button><div class="cm"><b>' + esc(HMONTHS[k[2] - 1]) + ' ' + k[1] + ' H' + (k[3] ? ' <i class="est">≈</i>' : '') + '</b><small>' + esc(fmtMid(start) + ' – ' + fmtMid(endIso)) + ' · ' + len + ' hari</small></div><button class="icb" data-act="calnext" aria-label="Bulan berikutnya"' + (idx >= last ? ' disabled' : '') + '>' + svgI('next') + '</button></div>' +
       '<div class="calgrid"><span class="dow">Min</span><span class="dow">Sen</span><span class="dow">Sel</span><span class="dow">Rab</span><span class="dow">Kam</span><span class="dow">Jum</span><span class="dow">Sab</span>' + cells + '</div>' +
-      '<div class="card evl"><b>Hari penting</b>' + (evs.length ? evs.map(e => '<div class="ei"><span>' + e[0] + ' ' + esc(HMONTHS[k[2] - 1]) + '</span><span>' + esc(e[2]) + ' · ' + esc(fmtLong(e[1])) + '</span></div>').join('') : '<span class="muted">Tidak ada hari besar pada bulan ini.</span>') + '<div class="ei"><span>13–15</span><span>Ayyamul Bidh (puasa sunnah)</span></div></div>' +
-      (idx !== (th ? th.idx : -1) ? '<button class="btn ghost" data-act="caltoday">Kembali ke bulan ini</button>' : '');
+      (evs.length ? '<div class="card evl">' + evs.map(e => '<div class="ei"><span>' + e[0] + ' ' + esc(HMONTHS[k[2] - 1]) + '</span><span>' + esc(e[2]) + ' · ' + esc(fmtLong(e[1])) + '</span></div>').join('') + '</div>' : '') +
+      (idx !== (th ? th.idx : -1) ? '<button class="btn ghost" data-act="caltoday">Bulan ini</button>' : '');
   }
-  return head + seg + body +
-    '<div class="card fine"><b>Kalender Hijriah Global Tunggal (KHGT)</b><span>Kalender Muhammadiyah: awal bulan ditetapkan serempak di seluruh dunia bila di mana pun di bumi tinggi bulan ≥ 5° dan elongasi ≥ 8° saat matahari terbenam. Tanggal berganti pukul 00:00. Tanda ≈ berarti awal bulan dihitung dengan kriteria KHGT dan belum dikonfirmasi tabel resmi Muhammadiyah. Tabel tersedia untuk 1447–1449 H. Penetapan pemerintah (Kemenag) dapat berbeda satu hari.</span></div>' +
-    '<p class="foot">Waktu Sholat · Developed by Ongarand</p>';
+  return head + seg + body + '<p class="foot">KHGT Muhammadiyah · ≈ perkiraan hitung</p>';
 }
-
+function supportBtn(url, text, cls) {
+  return url ? '<a class="btn ' + cls + '" href="' + esc(url) + '" target="_blank" rel="noopener">' + text + '</a>' : '<button class="btn ' + cls + '" data-act="soon">' + text + '</button>';
+}
 function viewPengaturan() {
   const l = curLoc();
-  const sw = (key, label, sub, checked) => '<label class="field"><span><b>' + label + '</b>' + (sub ? '<small>' + sub + '</small>' : '') + '</span><span class="sw"><input type="checkbox" data-set="' + key + '"' + (checked ? ' checked' : '') + '><i></i></span></label>';
+  const sw = (key, label, checked) => '<label class="field"><span><b>' + label + '</b></span><span class="sw"><input type="checkbox" data-set="' + key + '"' + (checked ? ' checked' : '') + '><i></i></span></label>';
   const segBtn = (key, v, t, cur) => '<button data-set-btn="' + key + '" data-v="' + v + '" aria-pressed="' + (cur === v) + '">' + t + '</button>';
-  const srcDesc = { kemenag: 'Data resmi Bimas Islam Kemenag RI per kabupaten/kota. Bila server tidak terjangkau, otomatis dihitung dengan parameter Kemenag di titik GPS Anda.', 'muslimpro': 'Metode hitung seperti aplikasi Muslim Pro, dihitung tepat di titik GPS (kelurahan). Pilih metode dan mazhab Ashar.' };
   const resList = RESULTS ? '<div class="list reslist">' + (RESULTS.length ? RESULTS.map((r, i) => '<button class="row" data-act="pick" data-i="' + i + '"><span class="nm">' + esc((r.area && (r.area.kel || r.area.kec)) || r.label.split(',')[0]) + '<small>' + esc(r.label) + '</small></span></button>').join('') : '<p class="muted pad">Tidak ada hasil.</p>') + '</div>' : '';
-  return '<div class="sec"><h2>Lokasi</h2><div class="card"><div class="curloc">' + svgI('pin') + '<span><b>' + esc(locTitle(l)) + '</b><small>' + esc(locSub(l) || 'Kelurahan belum terdeteksi') + '</small><small>' + esc(coordText(l)) + ' · ' + tzLabel(l.tz) + (l.mode === 'gps' ? ' · GPS' + (l.acc ? ' ±' + l.acc + ' m' : '') : l.mode === 'default' ? ' · contoh' : '') + '</small></span></div>' +
-    '<button class="btn" data-act="gps"' + (BUSY ? ' disabled' : '') + '>' + svgI('pin') + (BUSY || 'Gunakan GPS (tingkat kelurahan)') + '</button>' + (GPS_NOTE ? '<p class="warn-t">' + esc(GPS_NOTE) + '</p>' : '') +
-    '<label class="lbl" for="q">Cari kelurahan atau desa</label><div class="sr"><input id="q" type="search" placeholder="Contoh: Kelurahan Menteng, Jakarta Pusat" enterkeyhint="search" autocomplete="off"><button class="btn sm" data-act="search"' + (SEARCHING ? ' disabled' : '') + '>' + (SEARCHING ? 'Mencari…' : 'Cari') + '</button></div>' + resList +
-    '<label class="lbl" for="city">Atau pilih kota</label><select id="city" data-city><option value="">Pilih kota…</option>' + CITIES.map(c => '<option value="' + c[0] + '">' + esc(c[1]) + ' (' + tzLabel(c[4]) + ')</option>').join('') + '</select></div></div>' +
-    '<div class="sec"><h2>Sumber waktu sholat</h2><div class="card"><div class="seg three" role="group" aria-label="Sumber">' + segBtn('source', 'kemenag', 'Kemenag (resmi)', S.source === 'kemenag' ? 'kemenag' : '') + segBtn('source', 'kemenag-gps', 'Kemenag (titik GPS)', S.source) + segBtn('source', 'muslimpro', 'Muslim Pro', S.source) + '</div>' +
-    '<p class="muted">' + esc(S.source === 'muslimpro' ? srcDesc.muslimpro : S.source === 'kemenag-gps' ? 'Parameter Kemenag (Subuh −20°, Isya −18°, ihtiyat +2 menit, Ashar Syafi\'i) dihitung tepat di koordinat Anda sehingga mengikuti kelurahan, bukan hanya kota.' : srcDesc.kemenag) + '</p>' +
-    (S.source === 'muslimpro' ? '<label class="lbl" for="mp">Metode hitung</label><select id="mp" data-set="mp">' + MP_METHODS.map(m => '<option value="' + m[0] + '"' + (S.mp === m[0] ? ' selected' : '') + '>' + esc(m[1]) + '</option>').join('') + '</select><div class="seg" role="group" aria-label="Mazhab Ashar">' + segBtn('asr', 'shafi', "Ashar Syafi'i", S.asr) + segBtn('asr', 'hanafi', 'Ashar Hanafi', S.asr) + '</div>' : '') +
-    '<p class="muted">Selisih antar kelurahan di kota yang sama biasanya hanya hitungan detik hingga sekitar satu menit.</p></div></div>' +
-    '<div class="sec"><h2>Tampilkan di jadwal</h2><div class="card nopad">' + sw('imsak', 'Imsak (imsakiyah)', '10 menit sebelum Subuh', S.imsak) + sw('dhuha', 'Waktu Dhuha', 'Mulai saat matahari setinggi 4,5°', S.dhuha) + '</div></div>' +
-    '<div class="sec"><h2>Pengingat</h2><div class="card nopad">' + sw('remind', 'Aktifkan pengingat', 'Notifikasi dan bunyi saat waktu tiba. Berjalan selama aplikasi terbuka.', S.remind) +
-    '<label class="field"><span><b>Ingatkan</b></span><select data-set="lead" data-num>' + [[0, 'Tepat waktu'], [5, '5 menit sebelum'], [10, '10 menit sebelum'], [15, '15 menit sebelum']].map(o => '<option value="' + o[0] + '"' + (S.lead === o[0] ? ' selected' : '') + '>' + o[1] + '</option>').join('') + '</select></label>' +
-    sw('sound', 'Bunyi pengingat', '', S.sound) + '<div class="field"><span><b>Coba pengingat</b></span><button class="btn sm" data-act="testrem">Uji bunyi</button></div></div></div>' +
+  return '<div class="sec"><h2>Lokasi</h2><div class="card"><div class="curloc">' + svgI('pin') + '<span><b>' + esc(locTitle(l)) + '</b><small>' + esc(locSub(l) || 'Kelurahan belum terdeteksi') + '</small><small>' + esc(coordText(l)) + ' · ' + tzLabel(l.tz) + (l.mode === 'gps' && l.acc ? ' · ±' + l.acc + ' m' : '') + '</small></span></div>' +
+    '<button class="btn" data-act="gps"' + (BUSY ? ' disabled' : '') + '>' + svgI('pin') + (BUSY || 'Gunakan GPS') + '</button>' + (GPS_NOTE ? '<p class="warn-t">' + esc(GPS_NOTE) + '</p>' : '') +
+    '<div class="sr"><input id="q" type="search" placeholder="Cari kelurahan atau desa" aria-label="Cari kelurahan atau desa" enterkeyhint="search" autocomplete="off"><button class="btn sm" data-act="search"' + (SEARCHING ? ' disabled' : '') + '>' + (SEARCHING ? '…' : 'Cari') + '</button></div>' + resList +
+    '<select id="city" data-city aria-label="Pilih kota"><option value="">Pilih kota…</option>' + CITIES.map(c => '<option value="' + c[0] + '">' + esc(c[1]) + ' (' + tzLabel(c[4]) + ')</option>').join('') + '</select></div></div>' +
+    '<div class="sec"><h2>Sumber waktu</h2><div class="card"><div class="seg three" role="group" aria-label="Sumber">' + segBtn('source', 'kemenag', 'Kemenag', S.source) + segBtn('source', 'kemenag-gps', 'Kemenag GPS', S.source) + segBtn('source', 'muslimpro', 'Muslim Pro', S.source) + '</div>' +
+    (S.source === 'muslimpro' ? '<select id="mp" data-set="mp" aria-label="Metode hitung">' + MP_METHODS.map(m => '<option value="' + m[0] + '"' + (S.mp === m[0] ? ' selected' : '') + '>' + esc(m[1]) + '</option>').join('') + '</select><div class="seg" role="group" aria-label="Mazhab Ashar">' + segBtn('asr', 'shafi', "Ashar Syafi'i", S.asr) + segBtn('asr', 'hanafi', 'Ashar Hanafi', S.asr) + '</div>' : '') + '</div></div>' +
+    '<div class="sec"><h2>Tampilkan</h2><div class="card nopad">' + sw('imsak', 'Imsak', S.imsak) + sw('dhuha', 'Dhuha', S.dhuha) + '</div></div>' +
     '<div class="sec"><h2>Tampilan</h2><div class="card"><div class="seg three" role="group" aria-label="Tema">' + segBtn('theme', 'auto', 'Otomatis', S.theme) + segBtn('theme', 'light', 'Terang', S.theme) + segBtn('theme', 'dark', 'Gelap', S.theme) + '</div></div></div>' +
-    '<div class="sec"><h2>Data</h2><div class="card"><p class="muted">Jadwal hari ini dimuat sekali dan disimpan sepanjang hari. Muat ulang hanya bila Anda ingin mengambil data terbaru secara manual.</p><button class="btn ghost" data-act="reload">Muat ulang data hari ini</button></div></div>' +
-    '<div class="sec"><h2>Tentang</h2><div class="card about">' + LOGO('ab-logo') + '<div><b>Waktu Sholat</b><span>Developed by Ongarand</span><small>Kalender Hijriah mengikuti KHGT Muhammadiyah. Widget layar utama bawaan ponsel membutuhkan aplikasi native; di versi ini gunakan tab Widget sebagai pintasan.</small></div></div></div>' +
-    '<p class="foot">Waktu Sholat · Developed by Ongarand</p>';
+    (NATIVE ? '<div class="sec"><h2>Widget</h2><div class="card"><p class="muted">Tahan layar utama, pilih Widget, lalu Waktu Sholat (4×1).</p></div></div>' : '') +
+    '<div class="sec"><h2>Dukung developer</h2><div class="card"><div class="two">' + supportBtn(RCFG.donateUrl, 'Donasi', '') + supportBtn(RCFG.proUrl, 'Beli Pro', 'ghost') + '</div></div></div>' +
+    '<div class="sec"><div class="card"><button class="btn ghost" data-act="reload">Muat ulang data hari ini</button></div></div>' +
+    '<div class="card about">' + LOGO('ab-logo') + '<div><b>Waktu Sholat</b><span>Developed by Ongarand</span><small>Versi ' + APP_VERSION + (APP_BUILD ? ' · build ' + APP_BUILD : '') + '</small></div></div>';
+}
+function sheetHTML() {
+  if (!SHEET) return '';
+  const k = SHEET, cur = modeOf(k), ev = EVS.find(e => e.k === k);
+  const opts = [['off', 'Mati'], ['biasa', 'Notifikasi biasa']].concat(azanOK(k) ? AZANS.map(a => [a.id, a.name]) : []);
+  return '<div class="scrim" data-act="sheetclose"></div><div class="sheet" role="dialog" aria-label="Pengingat ' + esc(LABEL[k]) + '"><div class="sh-h"><b>' + esc(LABEL[k]) + '</b><span>' + esc(ev ? ev.hm : '') + '</span></div>' +
+    opts.map(o => '<div class="opt' + (cur === o[0] ? ' on' : '') + '"><button class="opt-b" data-act="setmode" data-v="' + o[0] + '"><i class="rd"></i>' + esc(o[1]) + '</button>' + (AZANS.some(a => a.id === o[0]) ? '<button class="pv" data-act="preview" data-v="' + o[0] + '" aria-label="Putar contoh ' + esc(o[1]) + '">' + svgI('play') + '</button>' : '') + '</div>').join('') +
+    '<div class="sh-f">' + (azanOK(k) ? '<button class="btn ghost sm" data-act="modeall">Samakan semua</button>' : '') + '<button class="btn sm" data-act="sheetclose">Selesai</button></div></div>';
+}
+function renderSheet() { const s = $('#sheet'); if (!s) return; s.innerHTML = sheetHTML(); s.hidden = !SHEET; }
+function renderForce() {
+  const f = $('#force'); if (!f) return;
+  const need = NATIVE && APP_BUILD > 0 && RCFG.minBuild > APP_BUILD;
+  f.hidden = !need;
+  if (need) f.innerHTML = '<div class="fbox">' + LOGO('f-logo') + '<h1>Perbarui aplikasi</h1><p>' + esc(RCFG.message || 'Versi baru wajib dipasang untuk melanjutkan.') + '</p><a class="btn" href="' + esc(RCFG.apkUrl) + '" target="_blank" rel="noopener">Perbarui sekarang</a></div>';
 }
 
 function render() {
   const r = getRoute(), v = $('#view'); if (!v) return;
   const focus = document.activeElement && document.activeElement.id, selStart = document.activeElement && document.activeElement.selectionStart;
   const qv = $('#q') ? $('#q').value : null;
-  v.innerHTML = r === 'jadwal' ? viewJadwal() : r === 'widget' ? viewWidget() : r === 'kalender' ? viewKalender() : viewPengaturan();
+  v.innerHTML = r === 'jadwal' ? viewJadwal() : r === 'kalender' ? viewKalender() : viewPengaturan();
   $('#tabs-in').innerHTML = TABS.map(t => '<button class="tab" data-go="' + t[0] + '"' + (t[0] === r ? ' aria-current="page"' : '') + '>' + svgI(t[0]) + '<span>' + t[1] + '</span></button>').join('');
   if (r === 'pengaturan') {
     const c = $('#city'); if (c) c.value = '';
     if (qv != null && $('#q')) { $('#q').value = qv; if (focus === 'q') { $('#q').focus(); try { $('#q').setSelectionRange(selStart, selStart); } catch (e) { } } }
   }
-  document.body.classList.toggle('is-widget', r === 'widget');
-  tick();
+  renderSheet(); renderForce(); tick();
 }
 function tick() {
   const cd = $('#cd'), arc = $('#arc');
@@ -758,12 +851,11 @@ function tick() {
 // ---------- Interaksi ----------
 document.addEventListener('click', ev => {
   const g = ev.target.closest('[data-go]');
-  if (g) { const to = g.getAttribute('data-go'); if (getRoute() === to) { render(); } else { location.hash = '#' + to; render(); } window.scrollTo(0, 0); return; }
+  if (g) { const to = g.getAttribute('data-go'); if (getRoute() === to) render(); else { location.hash = '#' + to; render(); } window.scrollTo(0, 0); return; }
   const sb = ev.target.closest('[data-set-btn]');
   if (sb) {
     const k = sb.getAttribute('data-set-btn'), v = sb.getAttribute('data-v');
-    S[k] = v; save();
-    if (k === 'theme') applyTheme();
+    S[k] = v; save(); if (k === 'theme') applyTheme();
     render(); if (k === 'source' || k === 'asr') loadDay(false);
     return;
   }
@@ -772,58 +864,58 @@ document.addEventListener('click', ev => {
   if (act === 'gps') doGPS();
   else if (act === 'search') doSearch($('#q') && $('#q').value);
   else if (act === 'pick') pickResult(+a.getAttribute('data-i'));
-  else if (act === 'reload') { store.del('ws.day'); loadDay(true); toast('Memuat ulang data hari ini…'); }
-  else if (act === 'bell') {
-    const k = a.getAttribute('data-k');
-    if (!S.remind) { enableReminders().then(ok => { if (ok) { S.rem[k] = true; save(); render(); scheduleReminders(); } }); return; }
-    S.rem[k] = !S.rem[k]; save(); render(); scheduleReminders();
-  }
-  else if (act === 'testrem') { toast('Contoh pengingat: waktu Dzuhur'); if (S.sound) beep(); systemNotify('Waktu Sholat', 'Contoh pengingat: waktu Dzuhur'); }
+  else if (act === 'reload') { store.del('ws.day'); loadDay(true); toast('Memuat ulang…'); }
+  else if (act === 'bell') { SHEET = a.getAttribute('data-k'); renderSheet(); }
+  else if (act === 'sheetclose') { SHEET = null; stopPreview(); renderSheet(); }
+  else if (act === 'setmode') { setMode(SHEET, a.getAttribute('data-v')); }
+  else if (act === 'modeall') { setModeAll(modeOf(SHEET)); }
+  else if (act === 'preview') { preview(a.getAttribute('data-v')); }
+  else if (act === 'soon') toast('Segera hadir.');
   else if (act === 'calview') { S.calView = a.getAttribute('data-v'); save(); render(); }
   else if (act === 'calprev') { CAL_IDX = Math.max(0, calIndex() - 1); render(); }
   else if (act === 'calnext') { CAL_IDX = Math.min(KH.length - 2, calIndex() + 1); render(); }
   else if (act === 'caltoday') { CAL_IDX = null; render(); }
   else if (act === 'calgo') { CAL_IDX = +a.getAttribute('data-i'); S.calView = 'bulan'; save(); render(); window.scrollTo(0, 0); }
 });
-document.addEventListener('keydown', ev => { if (ev.key === 'Enter' && ev.target && ev.target.id === 'q') doSearch(ev.target.value); });
-async function enableReminders() {
-  try {
-    if ('Notification' in window && Notification.permission === 'default') { await Notification.requestPermission(); }
-  } catch (e) { }
-  S.remind = true; save();
-  const granted = ('Notification' in window) && Notification.permission === 'granted';
-  toast(granted ? 'Pengingat aktif. Aplikasi harus tetap terbuka.' : 'Pengingat aktif dengan bunyi dan pesan di layar (notifikasi sistem tidak diizinkan).');
-  return true;
-}
-document.addEventListener('change', async ev => {
+document.addEventListener('keydown', ev => {
+  if (ev.key === 'Enter' && ev.target && ev.target.id === 'q') doSearch(ev.target.value);
+  if (ev.key === 'Escape' && SHEET) { SHEET = null; stopPreview(); renderSheet(); }
+});
+document.addEventListener('change', ev => {
   const t = ev.target;
   if (t.matches('[data-city]')) { if (t.value) pickCityId(t.value); return; }
   const k = t.getAttribute && t.getAttribute('data-set'); if (!k) return;
-  if (k === 'remind') {
-    if (t.checked) { await enableReminders(); } else { S.remind = false; save(); }
-    render(); scheduleReminders(); return;
-  }
-  S[k] = t.type === 'checkbox' ? t.checked : t.hasAttribute('data-num') ? +t.value : t.value;
-  save();
+  S[k] = t.type === 'checkbox' ? t.checked : t.value; save();
   if (k === 'mp') { render(); loadDay(false); return; }
-  if (k === 'imsak' || k === 'dhuha') { refreshNext(); render(); scheduleReminders(); return; }
-  if (k === 'lead' || k === 'sound') { scheduleReminders(); }
+  if (k === 'imsak' || k === 'dhuha') { refreshNext(); render(); scheduleReminders(); }
 });
 window.addEventListener('hashchange', () => { render(); window.scrollTo(0, 0); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { tick(); scheduleReminders(); } });
 
+// ---------- Pembaruan dan konfigurasi ----------
+async function loadAzans() {
+  try { const j = await getJSON('azan.json?t=' + Date.now(), 4000); AZANS = (Array.isArray(j) ? j : []).filter(a => a && /^azan\d$/.test(a.id)); } catch (e) { AZANS = []; }
+  render();
+}
+async function checkConfig() {
+  try {
+    const c = await getJSON(CONFIG_URL + '?t=' + Date.now(), 6000);
+    RCFG = Object.assign({}, CFG_DEF, c); store.set('ws.cfg', RCFG); render();
+  } catch (e) { /* tanpa internet: pakai salinan terakhir */ }
+}
+
 // ---------- Mulai ----------
 function init() {
   applyTheme(); render();
-  try { if (location.protocol === 'https:' && 'serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => { }); } catch (e) { }
-  loadDay(false);
-  setInterval(tick, 1000);
-  // perbarui titik GPS secara senyap bila izin sudah diberikan sebelumnya
   try {
-    if (navigator.permissions && navigator.permissions.query && (!S.loc || S.loc.mode === 'gps')) {
-      navigator.permissions.query({ name: 'geolocation' }).then(p => { if (p.state === 'granted') doGPS(); }).catch(() => { });
+    if ('serviceWorker' in navigator) {
+      if (NATIVE) navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister())).catch(() => { });
+      else if (location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => { });
     }
   } catch (e) { }
+  loadDay(false); loadAzans(); checkConfig();
+  setInterval(tick, 1000);
+  if (!S.loc || S.loc.mode === 'gps') doGPS();
 }
 init();
 

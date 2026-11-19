@@ -3,5 +3,7 @@
   "appName": "Waktu Sholat",
   "webDir": "www",
   "server": { "androidScheme": "https" },
-  "plugins": { "CapacitorHttp": { "enabled": true } }
+  "plugins": {
+    "LocalNotifications": { "smallIcon": "ic_stat_ws", "iconColor": "#164A39" }
+  }
 }
